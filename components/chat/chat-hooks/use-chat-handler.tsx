@@ -222,25 +222,6 @@ export const useChatHandler = () => {
         console.log("Created chat:", currentChat.id)
       }
 
-      // Simple test - just call the assistant API directly
-      console.log("Calling OpenAI Assistant API...")
-
-      const response = await fetch("/api/send-message", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          message: messageContent,
-          threadId: threadId
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to send message")
-      }
-
       // Add the user message immediately
       const currentTime = Date.now()
       const tempUserMessage: ChatMessage = {
@@ -260,14 +241,14 @@ export const useChatHandler = () => {
         fileItems: []
       }
 
-      // Create initial assistant message
+      // Create initial assistant message with loading state
       const tempAssistantMessage: ChatMessage = {
         message: {
           id: `assistant-${currentTime}`,
           chat_id: currentChat?.id || "temp",
           assistant_id: null,
           user_id: profile?.user_id || "",
-          content: "",
+          content: "Thinking...",
           model: "gpt-4-turbo-preview",
           role: "assistant",
           sequence_number: currentTime + 1,
@@ -278,8 +259,27 @@ export const useChatHandler = () => {
         fileItems: []
       }
 
-      // Add both messages to chat
+      // Add both messages to chat immediately
       setChatMessages(prev => [...prev, tempUserMessage, tempAssistantMessage])
+
+      // Simple test - just call the assistant API directly
+      console.log("Calling OpenAI Assistant API...")
+
+      const response = await fetch("/api/send-message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: messageContent,
+          threadId: threadId
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to send message")
+      }
 
       // Handle streaming response
       const reader = response.body?.getReader()
@@ -296,15 +296,18 @@ export const useChatHandler = () => {
           if (done) break
 
           const chunk = new TextDecoder().decode(value)
+          console.log("Received chunk:", chunk)
           const lines = chunk.split("\n")
 
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6))
+                console.log("Parsed data:", data)
 
                 if (data.type === "content" && data.content) {
                   assistantContent += data.content
+                  console.log("Updated assistant content:", assistantContent)
                   // Update the assistant message with accumulated content
                   setChatMessages(prev =>
                     prev.map(msg =>
@@ -320,6 +323,7 @@ export const useChatHandler = () => {
                     )
                   )
                 } else if (data.type === "done") {
+                  console.log("Stream completed")
                   if (data.threadId) {
                     finalThreadId = data.threadId
                     setThreadId(data.threadId)

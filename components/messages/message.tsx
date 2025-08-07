@@ -23,6 +23,7 @@ import { TextareaAutosize } from "../ui/textarea-autosize"
 import { WithTooltip } from "../ui/with-tooltip"
 import { MessageActions } from "./message-actions"
 import { MessageMarkdown } from "./message-markdown"
+import { ThinkingAnimation } from "./thinking-animation"
 
 const ICON_SIZE = 32
 
@@ -304,6 +305,8 @@ export const Message: FC<MessageProps> = ({
               onValueChange={setEditedMessage}
               maxRows={20}
             />
+          ) : message.content === "Thinking..." ? (
+            <ThinkingAnimation message="Biblio-Tek is thinking" />
           ) : (
             <MessageMarkdown content={message.content} />
           )}

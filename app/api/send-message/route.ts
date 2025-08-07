@@ -210,6 +210,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    console.log("Returning streaming response")
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
