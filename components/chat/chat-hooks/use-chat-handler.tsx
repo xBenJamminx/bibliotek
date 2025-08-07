@@ -197,212 +197,82 @@ export const useChatHandler = () => {
     chatMessages: ChatMessage[],
     isRegeneration: boolean
   ) => {
+    console.log("handleSendMessage called with:", messageContent)
     const startingInput = messageContent
 
     try {
       setUserInput("")
       setIsGenerating(true)
-      setIsPromptPickerOpen(false)
-      setIsFilePickerOpen(false)
-      setNewMessageImages([])
 
-      const newAbortController = new AbortController()
-      setAbortController(newAbortController)
+      // Simple test - just call the assistant API directly
+      console.log("Calling OpenAI Assistant API...")
 
-      const modelData = [
-        ...models.map(model => ({
-          modelId: model.model_id as LLMID,
-          modelName: model.name,
-          provider: "custom" as ModelProvider,
-          hostedId: model.id,
-          platformLink: "",
-          imageInput: false
-        })),
-        ...LLM_LIST,
-        ...availableLocalModels,
-        ...availableOpenRouterModels
-      ].find(llm => llm.modelId === chatSettings?.model)
-
-      validateChatSettings(
-        chatSettings,
-        modelData,
-        profile,
-        selectedWorkspace,
-        messageContent
-      )
-
-      let currentChat = selectedChat ? { ...selectedChat } : null
-
-      const b64Images = newMessageImages.map(image => image.base64)
-
-      let retrievedFileItems: Tables<"file_items">[] = []
-
-      if (
-        (newMessageFiles.length > 0 || chatFiles.length > 0) &&
-        useRetrieval
-      ) {
-        setToolInUse("retrieval")
-
-        retrievedFileItems = await handleRetrieval(
-          userInput,
-          newMessageFiles,
-          chatFiles,
-          chatSettings!.embeddingsProvider,
-          sourceCount
-        )
-      }
-
-      const { tempUserChatMessage, tempAssistantChatMessage } =
-        createTempMessages(
-          messageContent,
-          chatMessages,
-          chatSettings!,
-          b64Images,
-          isRegeneration,
-          setChatMessages,
-          selectedAssistant
-        )
-
-      let payload: ChatPayload = {
-        chatSettings: chatSettings!,
-        workspaceInstructions: selectedWorkspace!.instructions || "",
-        chatMessages: isRegeneration
-          ? [...chatMessages]
-          : [...chatMessages, tempUserChatMessage],
-        assistant: selectedChat?.assistant_id ? selectedAssistant : null,
-        messageFileItems: retrievedFileItems,
-        chatFileItems: chatFileItems
-      }
-
-      let generatedText = ""
-
-      if (selectedTools.length > 0) {
-        setToolInUse("Tools")
-
-        const formattedMessages = await buildFinalMessages(
-          payload,
-          profile!,
-          chatImages
-        )
-
-        const response = await fetch("/api/chat/tools", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            chatSettings: payload.chatSettings,
-            messages: formattedMessages,
-            selectedTools
-          })
+      const response = await fetch("/api/send-message", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: messageContent,
+          threadId: threadId
         })
+      })
 
-        setToolInUse("none")
-
-        generatedText = await processResponse(
-          response,
-          isRegeneration
-            ? payload.chatMessages[payload.chatMessages.length - 1]
-            : tempAssistantChatMessage,
-          true,
-          newAbortController,
-          setFirstTokenReceived,
-          setChatMessages,
-          setToolInUse
-        )
-      } else {
-        // Check if we have a selected assistant and should use the Assistants API
-        if (selectedAssistant && modelData!.provider === "openai") {
-          generatedText = await handleAssistantChat(
-            messageContent,
-            threadId,
-            tempAssistantChatMessage,
-            isRegeneration,
-            newAbortController,
-            setIsGenerating,
-            setFirstTokenReceived,
-            setChatMessages,
-            setToolInUse,
-            setThreadId
-          )
-        } else if (modelData!.provider === "ollama") {
-          generatedText = await handleLocalChat(
-            payload,
-            profile!,
-            chatSettings!,
-            tempAssistantChatMessage,
-            isRegeneration,
-            newAbortController,
-            setIsGenerating,
-            setFirstTokenReceived,
-            setChatMessages,
-            setToolInUse
-          )
-        } else {
-          generatedText = await handleHostedChat(
-            payload,
-            profile!,
-            modelData!,
-            tempAssistantChatMessage,
-            isRegeneration,
-            newAbortController,
-            newMessageImages,
-            chatImages,
-            setIsGenerating,
-            setFirstTokenReceived,
-            setChatMessages,
-            setToolInUse
-          )
-        }
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to send message")
       }
 
-      if (!currentChat) {
-        currentChat = await handleCreateChat(
-          chatSettings!,
-          profile!,
-          selectedWorkspace!,
-          messageContent,
-          selectedAssistant!,
-          newMessageFiles,
-          setSelectedChat,
-          setChats,
-          setChatFiles
-        )
-      } else {
-        const updatedChat = await updateChat(currentChat.id, {
+      const data = await response.json()
+      console.log("Assistant response:", data)
+
+      // Update thread ID if it's a new thread
+      if (data.threadId && data.threadId !== threadId) {
+        setThreadId(data.threadId)
+      }
+
+      // Add the messages to the chat
+      const currentTime = Date.now()
+      const tempUserMessage: ChatMessage = {
+        message: {
+          id: `user-${currentTime}`,
+          chat_id: selectedChat?.id || "temp",
+          assistant_id: null,
+          user_id: profile?.user_id || "",
+          content: messageContent,
+          model: "gpt-4-turbo-preview",
+          role: "user",
+          sequence_number: currentTime,
+          image_paths: [],
+          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        })
-
-        setChats(prevChats => {
-          const updatedChats = prevChats.map(prevChat =>
-            prevChat.id === updatedChat.id ? updatedChat : prevChat
-          )
-
-          return updatedChats
-        })
+        },
+        fileItems: []
       }
 
-      await handleCreateMessages(
-        chatMessages,
-        currentChat,
-        profile!,
-        modelData!,
-        messageContent,
-        generatedText,
-        newMessageImages,
-        isRegeneration,
-        retrievedFileItems,
-        setChatMessages,
-        setChatFileItems,
-        setChatImages,
-        selectedAssistant
-      )
+      const tempAssistantMessage: ChatMessage = {
+        message: {
+          id: `assistant-${currentTime}`,
+          chat_id: selectedChat?.id || "temp",
+          assistant_id: null,
+          user_id: profile?.user_id || "",
+          content: data.message,
+          model: "gpt-4-turbo-preview",
+          role: "assistant",
+          sequence_number: currentTime + 1,
+          image_paths: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        fileItems: []
+      }
+
+      setChatMessages(prev => [...prev, tempUserMessage, tempAssistantMessage])
 
       setIsGenerating(false)
-      setFirstTokenReceived(false)
     } catch (error) {
+      console.error("Error in handleSendMessage:", error)
       setIsGenerating(false)
-      setFirstTokenReceived(false)
       setUserInput(startingInput)
     }
   }

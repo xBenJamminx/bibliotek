@@ -30,9 +30,6 @@ export const usePromptAndCommand = () => {
   } = useContext(ChatbotUIContext)
 
   const handleInputChange = (value: string) => {
-    console.log("handleInputChange called with:", value)
-    console.log("Current userInput state:", userInput)
-
     const atTextRegex = /@([^ ]*)$/
     const slashTextRegex = /\/([^ ]*)$/
     const hashtagTextRegex = /#([^ ]*)$/
@@ -43,23 +40,18 @@ export const usePromptAndCommand = () => {
     const toolMatch = value.match(toolTextRegex)
 
     if (atMatch) {
-      console.log("Found @ match:", atMatch[1])
       setIsAssistantPickerOpen(true)
       setAtCommand(atMatch[1])
     } else if (slashMatch) {
-      console.log("Found / match:", slashMatch[1])
       setIsPromptPickerOpen(true)
       setSlashCommand(slashMatch[1])
     } else if (hashtagMatch) {
-      console.log("Found # match:", hashtagMatch[1])
       setIsFilePickerOpen(true)
       setHashtagCommand(hashtagMatch[1])
     } else if (toolMatch) {
-      console.log("Found ! match:", toolMatch[1])
       setIsToolPickerOpen(true)
       setToolCommand(toolMatch[1])
     } else {
-      console.log("No special commands found, closing all pickers")
       setIsPromptPickerOpen(false)
       setIsFilePickerOpen(false)
       setIsToolPickerOpen(false)
@@ -70,9 +62,7 @@ export const usePromptAndCommand = () => {
       setAtCommand("")
     }
 
-    console.log("About to set userInput to:", value)
     setUserInput(value)
-    console.log("setUserInput called")
   }
 
   const handleSelectPrompt = (prompt: Tables<"prompts">) => {

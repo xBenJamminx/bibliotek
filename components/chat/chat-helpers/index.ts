@@ -419,7 +419,7 @@ export const handleCreateChat = async (
   profile: Tables<"profiles">,
   selectedWorkspace: Tables<"workspaces">,
   messageContent: string,
-  selectedAssistant: Tables<"assistants">,
+  selectedAssistant: Tables<"assistants"> | null,
   newMessageFiles: ChatFile[],
   setSelectedChat: React.Dispatch<React.SetStateAction<Tables<"chats"> | null>>,
   setChats: React.Dispatch<React.SetStateAction<Tables<"chats">[]>>,

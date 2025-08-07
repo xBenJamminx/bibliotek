@@ -54,26 +54,54 @@ export async function POST(request: NextRequest) {
 
     // Create a new thread if none provided
     if (!currentThreadId) {
-      const thread = await openai.beta.threads.create()
+      const thread = await openai.beta.threads.create(
+        {},
+        {
+          headers: {
+            "OpenAI-Beta": "assistants=v2"
+          }
+        }
+      )
       currentThreadId = thread.id
       console.log("Created new thread:", currentThreadId)
     }
 
     // Add the user message to the thread
-    await openai.beta.threads.messages.create(currentThreadId, {
-      role: "user",
-      content: message
-    })
+    await openai.beta.threads.messages.create(
+      currentThreadId,
+      {
+        role: "user",
+        content: message
+      },
+      {
+        headers: {
+          "OpenAI-Beta": "assistants=v2"
+        }
+      }
+    )
 
     // Create and run the assistant
-    const run = await openai.beta.threads.runs.create(currentThreadId, {
-      assistant_id: assistantId
-    })
+    const run = await openai.beta.threads.runs.create(
+      currentThreadId,
+      {
+        assistant_id: assistantId
+      },
+      {
+        headers: {
+          "OpenAI-Beta": "assistants=v2"
+        }
+      }
+    )
 
     // Poll for completion
     let runStatus = await openai.beta.threads.runs.retrieve(
       currentThreadId,
-      run.id
+      run.id,
+      {
+        headers: {
+          "OpenAI-Beta": "assistants=v2"
+        }
+      }
     )
 
     // Keep checking until the run is completed
@@ -85,13 +113,25 @@ export async function POST(request: NextRequest) {
       await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
       runStatus = await openai.beta.threads.runs.retrieve(
         currentThreadId,
-        run.id
+        run.id,
+        {
+          headers: {
+            "OpenAI-Beta": "assistants=v2"
+          }
+        }
       )
     }
 
     if (runStatus.status === "completed") {
       // Get the assistant's response
-      const messages = await openai.beta.threads.messages.list(currentThreadId)
+      const messages = await openai.beta.threads.messages.list(
+        currentThreadId,
+        {
+          headers: {
+            "OpenAI-Beta": "assistants=v2"
+          }
+        }
+      )
       const assistantMessage = messages.data.find(
         msg => msg.role === "assistant" && msg.run_id === run.id
       )

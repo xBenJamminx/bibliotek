@@ -80,7 +80,7 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
     model: "gpt-4-turbo-preview",
     prompt: "You are a helpful AI assistant.",
     temperature: 0.5,
-    contextLength: 4000,
+    contextLength: 4096,
     includeProfileContext: true,
     includeWorkspaceInstructions: true,
     embeddingsProvider: "openai"
@@ -267,7 +267,7 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
 
         // PASSIVE CHAT STORE
         userInput,
-        setUserInput: setUserInputWithDebug,
+        setUserInput,
         chatMessages,
         setChatMessages,
         chatSettings,
