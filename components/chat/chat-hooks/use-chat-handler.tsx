@@ -4,7 +4,10 @@ import { getAssistantFilesByAssistantId } from "@/db/assistant-files"
 import { getAssistantToolsByAssistantId } from "@/db/assistant-tools"
 import { updateChat } from "@/db/chats"
 import { getCollectionFilesByCollectionId } from "@/db/collection-files"
-import { deleteMessagesIncludingAndAfter } from "@/db/messages"
+import {
+  deleteMessagesIncludingAndAfter,
+  getMessagesByChatId
+} from "@/db/messages"
 import { buildFinalMessages } from "@/lib/build-prompt"
 import { Tables } from "@/supabase/types"
 import { ChatMessage, ChatPayload, LLMID, ModelProvider } from "@/types"
@@ -192,6 +195,19 @@ export const useChatHandler = () => {
     }
   }
 
+  const loadChatMessages = async (chatId: string) => {
+    try {
+      const messages = await getMessagesByChatId(chatId)
+      const chatMessages = messages.map(message => ({
+        message,
+        fileItems: []
+      }))
+      setChatMessages(chatMessages)
+    } catch (error) {
+      console.error("Error loading chat messages:", error)
+    }
+  }
+
   const handleSendMessage = async (
     messageContent: string,
     chatMessages: ChatMessage[],
@@ -220,6 +236,9 @@ export const useChatHandler = () => {
           setChatFiles
         )
         console.log("Created chat:", currentChat.id)
+
+        // Navigate to the chat URL so messages will be loaded
+        router.push(`/${selectedWorkspace.id}/chat/${currentChat.id}`)
       }
 
       // Add the user message immediately
@@ -281,63 +300,183 @@ export const useChatHandler = () => {
         throw new Error(errorData.error || "Failed to send message")
       }
 
-      // Handle streaming response
-      const reader = response.body?.getReader()
-      if (!reader) {
-        throw new Error("No response body")
-      }
+      // Check if response is streaming
+      const contentType = response.headers.get("content-type")
+      console.log("Response content type:", contentType)
 
-      let assistantContent = ""
-      let finalThreadId = threadId
+      if (contentType?.includes("text/event-stream")) {
+        // Handle streaming response
+        const reader = response.body?.getReader()
+        if (!reader) {
+          throw new Error("No response body")
+        }
 
-      try {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
+        let assistantContent = ""
+        let finalThreadId = threadId
 
-          const chunk = new TextDecoder().decode(value)
-          console.log("Received chunk:", chunk)
-          const lines = chunk.split("\n")
+        try {
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
 
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6))
-                console.log("Parsed data:", data)
+            const chunk = new TextDecoder().decode(value)
+            console.log("Received chunk:", chunk)
+            const lines = chunk.split("\n")
 
-                if (data.type === "content" && data.content) {
-                  assistantContent += data.content
-                  console.log("Updated assistant content:", assistantContent)
-                  // Update the assistant message with accumulated content
-                  setChatMessages(prev =>
-                    prev.map(msg =>
-                      msg.message.id === `assistant-${currentTime}`
-                        ? {
-                            ...msg,
-                            message: {
-                              ...msg.message,
-                              content: assistantContent
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6))
+                  console.log("Parsed data:", data)
+
+                  if (data.type === "content" && data.content) {
+                    assistantContent += data.content
+                    console.log("Updated assistant content:", assistantContent)
+                    // Update the assistant message with accumulated content
+                    setChatMessages(prev =>
+                      prev.map(msg =>
+                        msg.message.id === `assistant-${currentTime}`
+                          ? {
+                              ...msg,
+                              message: {
+                                ...msg.message,
+                                content: assistantContent
+                              }
                             }
-                          }
-                        : msg
+                          : msg
+                      )
                     )
-                  )
-                } else if (data.type === "done") {
-                  console.log("Stream completed")
-                  if (data.threadId) {
-                    finalThreadId = data.threadId
-                    setThreadId(data.threadId)
+                  } else if (data.type === "done") {
+                    console.log("Stream completed")
+
+                    // Persist messages to database
+                    if (currentChat && profile) {
+                      try {
+                        const userMessage = await createMessage({
+                          chat_id: currentChat.id,
+                          assistant_id: null,
+                          user_id: profile.user_id,
+                          content: messageContent,
+                          model: "gpt-4-turbo-preview",
+                          role: "user",
+                          sequence_number: chatMessages.length,
+                          image_paths: []
+                        })
+
+                        const assistantMessage = await createMessage({
+                          chat_id: currentChat.id,
+                          assistant_id: null,
+                          user_id: profile.user_id,
+                          content: assistantContent,
+                          model: "gpt-4-turbo-preview",
+                          role: "assistant",
+                          sequence_number: chatMessages.length + 1,
+                          image_paths: []
+                        })
+
+                        // Update the chat messages with the persisted messages
+                        setChatMessages(prev =>
+                          prev.map(msg =>
+                            msg.message.id === `user-${currentTime}`
+                              ? { ...msg, message: userMessage }
+                              : msg.message.id === `assistant-${currentTime}`
+                                ? { ...msg, message: assistantMessage }
+                                : msg
+                          )
+                        )
+
+                        // Reload all messages from database to ensure consistency
+                        await loadChatMessages(currentChat.id)
+                      } catch (error) {
+                        console.error("Error persisting messages:", error)
+                      }
+                    }
+
+                    if (data.threadId) {
+                      finalThreadId = data.threadId
+                      setThreadId(data.threadId)
+                    }
+                    break
                   }
-                  break
+                } catch (e) {
+                  console.error("Error parsing stream data:", e)
                 }
-              } catch (e) {
-                console.error("Error parsing stream data:", e)
               }
             }
           }
+        } finally {
+          reader.releaseLock()
         }
-      } finally {
-        reader.releaseLock()
+      } else {
+        // Fallback to JSON response
+        console.log("Using JSON response fallback")
+        const data = await response.json()
+        console.log("JSON response:", data)
+
+        // Update the assistant message with the full response
+        const finalAssistantContent = data.message || "No response received"
+
+        // Persist messages to database
+        if (currentChat && profile) {
+          try {
+            const userMessage = await createMessage({
+              chat_id: currentChat.id,
+              assistant_id: null,
+              user_id: profile.user_id,
+              content: messageContent,
+              model: "gpt-4-turbo-preview",
+              role: "user",
+              sequence_number: chatMessages.length,
+              image_paths: []
+            })
+
+            const assistantMessage = await createMessage({
+              chat_id: currentChat.id,
+              assistant_id: null,
+              user_id: profile.user_id,
+              content: finalAssistantContent,
+              model: "gpt-4-turbo-preview",
+              role: "assistant",
+              sequence_number: chatMessages.length + 1,
+              image_paths: []
+            })
+
+            // Update the chat messages with the persisted messages
+            setChatMessages(prev =>
+              prev.map(msg =>
+                msg.message.id === `user-${currentTime}`
+                  ? { ...msg, message: userMessage }
+                  : msg.message.id === `assistant-${currentTime}`
+                    ? { ...msg, message: assistantMessage }
+                    : msg
+              )
+            )
+
+            // Reload all messages from database to ensure consistency
+            await loadChatMessages(currentChat.id)
+          } catch (error) {
+            console.error("Error persisting messages:", error)
+          }
+        } else {
+          // Fallback to just updating the content
+          setChatMessages(prev =>
+            prev.map(msg =>
+              msg.message.id === `assistant-${currentTime}`
+                ? {
+                    ...msg,
+                    message: {
+                      ...msg.message,
+                      content: finalAssistantContent
+                    }
+                  }
+                : msg
+            )
+          )
+        }
+
+        if (data.threadId) {
+          setThreadId(data.threadId)
+        }
       }
 
       setIsGenerating(false)

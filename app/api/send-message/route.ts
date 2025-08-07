@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
               assistantMessage.content[0]?.type === "text"
             ) {
               const fullMessage = assistantMessage.content[0].text.value
+              console.log("Full message to stream:", fullMessage)
 
               // Stream the message in chunks
               const chunkSize = 10
@@ -163,6 +164,7 @@ export async function POST(request: NextRequest) {
                   type: "content",
                   content: chunk
                 }
+                console.log("Sending chunk:", chunk)
                 controller.enqueue(
                   encoder.encode(`data: ${JSON.stringify(streamResponse)}\n\n`)
                 )

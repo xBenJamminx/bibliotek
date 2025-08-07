@@ -305,8 +305,18 @@ export const Message: FC<MessageProps> = ({
               onValueChange={setEditedMessage}
               maxRows={20}
             />
-          ) : message.content === "Thinking..." ? (
-            <ThinkingAnimation message="Biblio-Tek is thinking" />
+          ) : message.content === "Thinking..." &&
+            message.role === "assistant" ? (
+            <div className="flex items-center space-x-2">
+              <div className="flex space-x-1">
+                <div className="size-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.3s]"></div>
+                <div className="size-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.15s]"></div>
+                <div className="size-2 animate-bounce rounded-full bg-blue-500"></div>
+              </div>
+              <span className="text-muted-foreground text-sm font-medium">
+                Biblio-Tek is thinking...
+              </span>
+            </div>
           ) : (
             <MessageMarkdown content={message.content} />
           )}
