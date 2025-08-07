@@ -193,22 +193,7 @@ export const Message: FC<MessageProps> = ({
           "relative flex w-full flex-col p-4 sm:w-[550px] sm:px-0 md:w-[650px] lg:w-[650px] xl:w-[700px]"
         )}
       >
-        <div
-          className={cn(
-            "absolute top-5",
-            message.role === "user" ? "right-2 sm:right-0" : "left-2 sm:left-0"
-          )}
-        >
-          <MessageActions
-            onCopy={handleCopy}
-            onEdit={handleStartEdit}
-            isAssistant={message.role === "assistant"}
-            isLast={isLast}
-            isEditing={isEditing}
-            isHovering={isHovering}
-            onRegenerate={handleRegenerate}
-          />
-        </div>
+        {/* Actions row will render below the bubble to avoid overlap */}
         <div className="space-y-3">
           {message.role === "system" ? (
             <div className="flex items-center space-x-4">
@@ -219,71 +204,44 @@ export const Message: FC<MessageProps> = ({
 
               <div className="text-lg font-semibold">Prompt</div>
             </div>
-          ) : (
-            <div
-              className={cn(
-                "flex items-center space-x-3",
-                message.role === "user" && "flex-row-reverse space-x-reverse"
-              )}
-            >
-              {message.role === "assistant" ? (
-                messageAssistantImage ? (
-                  <Image
-                    style={{
-                      width: `${ICON_SIZE}px`,
-                      height: `${ICON_SIZE}px`
-                    }}
-                    className="rounded"
-                    src={messageAssistantImage}
-                    alt="assistant image"
-                    height={ICON_SIZE}
-                    width={ICON_SIZE}
-                  />
-                ) : (
-                  <WithTooltip
-                    display={<div>{MODEL_DATA?.modelName}</div>}
-                    trigger={
-                      <ModelIcon
-                        provider={modelDetails?.provider || "custom"}
-                        height={ICON_SIZE}
-                        width={ICON_SIZE}
-                      />
-                    }
-                  />
-                )
-              ) : profile?.image_url ? (
+          ) : message.role === "assistant" ? (
+            <div className="flex items-center space-x-3">
+              {messageAssistantImage ? (
                 <Image
-                  className={`size-[32px] rounded`}
-                  src={profile?.image_url}
-                  height={32}
-                  width={32}
-                  alt="user image"
+                  style={{
+                    width: `${ICON_SIZE}px`,
+                    height: `${ICON_SIZE}px`
+                  }}
+                  className="rounded"
+                  src={messageAssistantImage}
+                  alt="assistant image"
+                  height={ICON_SIZE}
+                  width={ICON_SIZE}
                 />
               ) : (
-                <IconMoodSmile
-                  className="bg-primary text-secondary border-primary rounded border-DEFAULT p-1"
-                  size={ICON_SIZE}
+                <WithTooltip
+                  display={<div>{MODEL_DATA?.modelName}</div>}
+                  trigger={
+                    <ModelIcon
+                      provider={modelDetails?.provider || "custom"}
+                      height={ICON_SIZE}
+                      width={ICON_SIZE}
+                    />
+                  }
                 />
               )}
 
-              <div
-                className={cn(
-                  "font-semibold",
-                  message.role === "user" && "text-right"
-                )}
-              >
-                {message.role === "assistant"
-                  ? message.assistant_id
-                    ? assistants.find(
-                        assistant => assistant.id === message.assistant_id
-                      )?.name
-                    : selectedAssistant
-                      ? selectedAssistant?.name
-                      : "Biblio-Tek"
-                  : profile?.display_name ?? profile?.username}
+              <div className="font-semibold">
+                {message.assistant_id
+                  ? assistants.find(
+                      assistant => assistant.id === message.assistant_id
+                    )?.name
+                  : selectedAssistant
+                    ? selectedAssistant?.name
+                    : "Biblio-Tek"}
               </div>
             </div>
-          )}
+          ) : null}
           {isEditing ? (
             <TextareaAutosize
               textareaRef={editInputRef}
@@ -347,6 +305,24 @@ export const Message: FC<MessageProps> = ({
               </div>
             </>
           )}
+        </div>
+
+        {/* Actions below bubble, aligned to side of message */}
+        <div
+          className={cn(
+            "mt-1 flex",
+            message.role === "user" ? "justify-end" : "justify-start"
+          )}
+        >
+          <MessageActions
+            onCopy={handleCopy}
+            onEdit={handleStartEdit}
+            isAssistant={message.role === "assistant"}
+            isLast={isLast}
+            isEditing={isEditing}
+            isHovering={isHovering}
+            onRegenerate={handleRegenerate}
+          />
         </div>
 
         {/* Message timestamp */}

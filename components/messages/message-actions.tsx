@@ -35,8 +35,6 @@ export const MessageActions: FC<MessageActionsProps> = ({
     toast.success("Message copied to clipboard!")
   }
 
-  const handleForkChat = async () => {}
-
   useEffect(() => {
     if (showCheckmark) {
       const timer = setTimeout(() => {
@@ -47,31 +45,23 @@ export const MessageActions: FC<MessageActionsProps> = ({
     }
   }, [showCheckmark])
 
-  return (isLast && isGenerating) || isEditing ? null : (
-    <div className="text-muted-foreground flex items-center space-x-2">
-      {/* {((isAssistant && isHovering) || isLast) && (
-        <WithTooltip
-          delayDuration={1000}
-          side="bottom"
-          display={<div>Fork Chat</div>}
-          trigger={
-            <IconGitFork
-              className="cursor-pointer hover:opacity-50"
-              size={MESSAGE_ICON_SIZE}
-              onClick={handleForkChat}
-            />
-          }
-        />
-      )} */}
+  if ((isLast && isGenerating) || isEditing) return null
 
+  return (
+    <div
+      className={`mt-1 flex items-center gap-2 ${
+        isAssistant ? "justify-start" : "justify-end"
+      }`}
+    >
+      {/* Edit appears only for user messages on hover */}
       {!isAssistant && isHovering && (
         <WithTooltip
-          delayDuration={1000}
+          delayDuration={400}
           side="bottom"
           display={<div>Edit</div>}
           trigger={
             <IconEdit
-              className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-50"
+              className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-70"
               size={MESSAGE_ICON_SIZE}
               onClick={onEdit}
             />
@@ -79,9 +69,10 @@ export const MessageActions: FC<MessageActionsProps> = ({
         />
       )}
 
+      {/* Copy */}
       {(isHovering || isLast) && (
         <WithTooltip
-          delayDuration={1000}
+          delayDuration={400}
           side="bottom"
           display={<div>Copy</div>}
           trigger={
@@ -89,7 +80,7 @@ export const MessageActions: FC<MessageActionsProps> = ({
               <IconCheck size={MESSAGE_ICON_SIZE} />
             ) : (
               <IconCopy
-                className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-50"
+                className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-70"
                 size={MESSAGE_ICON_SIZE}
                 onClick={handleCopy}
               />
@@ -98,22 +89,21 @@ export const MessageActions: FC<MessageActionsProps> = ({
         />
       )}
 
-      {isLast && (
+      {/* Regenerate only on the last assistant message */}
+      {isAssistant && isLast && (
         <WithTooltip
-          delayDuration={1000}
+          delayDuration={400}
           side="bottom"
           display={<div>Regenerate</div>}
           trigger={
             <IconRepeat
-              className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-50"
+              className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-70"
               size={MESSAGE_ICON_SIZE}
               onClick={onRegenerate}
             />
           }
         />
       )}
-
-      {/* {1 > 0 && isAssistant && <MessageReplies />} */}
     </div>
   )
 }
