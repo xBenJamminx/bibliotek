@@ -89,6 +89,16 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
   const [chatFileItems, setChatFileItems] = useState<Tables<"file_items">[]>([])
   const [threadId, setThreadId] = useState<string | null>(null)
 
+  // Wrapper for setUserInput with debugging
+  const setUserInputWithDebug = (
+    value: string | ((prev: string) => string)
+  ) => {
+    console.log("setUserInput called with:", value)
+    console.log("Previous userInput state:", userInput)
+    setUserInput(value)
+    console.log("setUserInput completed")
+  }
+
   // ACTIVE CHAT STORE
   const [isGenerating, setIsGenerating] = useState<boolean>(false)
   const [firstTokenReceived, setFirstTokenReceived] = useState<boolean>(false)
@@ -257,7 +267,7 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
 
         // PASSIVE CHAT STORE
         userInput,
-        setUserInput,
+        setUserInput: setUserInputWithDebug,
         chatMessages,
         setChatMessages,
         chatSettings,

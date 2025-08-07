@@ -54,7 +54,8 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
     chatSettings,
     selectedTools,
     setSelectedTools,
-    assistantImages
+    assistantImages,
+    setUserInput
   } = useContext(ChatbotUIContext)
 
   const {
@@ -82,10 +83,22 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
   }, [selectedPreset, selectedAssistant])
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
+    console.log("handleKeyDown called with key:", event.key)
+    console.log("isTyping state:", isTyping)
+    console.log("userInput state:", userInput)
+
     if (!isTyping && event.key === "Enter" && !event.shiftKey) {
+      console.log(
+        "Enter key condition met, preventing default and sending message"
+      )
       event.preventDefault()
       setIsPromptPickerOpen(false)
       handleSendMessage(userInput, chatMessages, false)
+    } else {
+      console.log("Enter key condition NOT met:")
+      console.log("- isTyping:", isTyping)
+      console.log("- event.key === 'Enter':", event.key === "Enter")
+      console.log("- !event.shiftKey:", !event.shiftKey)
     }
 
     // Consolidate conditions to avoid TypeScript error
@@ -212,6 +225,65 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
       </div>
 
       <div className="border-input relative mt-3 flex min-h-[60px] w-full items-center justify-center rounded-xl border-2">
+        {/* Test div to verify rendering */}
+        <div
+          style={{
+            position: "absolute",
+            top: "-50px",
+            left: "0",
+            background: "yellow",
+            padding: "5px",
+            zIndex: 10000
+          }}
+        >
+          TEST: Input field should be below
+        </div>
+
+        {/* Simple test input */}
+        <input
+          type="text"
+          placeholder="SIMPLE TEST INPUT"
+          style={{
+            position: "absolute",
+            top: "-30px",
+            left: "0",
+            background: "green",
+            color: "white",
+            padding: "5px",
+            zIndex: 10001,
+            width: "200px"
+          }}
+          onChange={e =>
+            console.log("SIMPLE TEST INPUT onChange:", e.target.value)
+          }
+          onClick={() => console.log("SIMPLE TEST INPUT clicked")}
+          onFocus={() => console.log("SIMPLE TEST INPUT focused")}
+        />
+
+        {/* Isolated test textarea */}
+        <textarea
+          placeholder="ISOLATED TEST TEXTAREA"
+          style={{
+            position: "absolute",
+            top: "-60px",
+            left: "0",
+            background: "blue",
+            color: "white",
+            padding: "5px",
+            zIndex: 10002,
+            width: "200px",
+            height: "50px"
+          }}
+          onChange={e =>
+            console.log("ISOLATED TEST TEXTAREA onChange:", e.target.value)
+          }
+          onClick={() => console.log("ISOLATED TEST TEXTAREA clicked")}
+          onFocus={() => console.log("ISOLATED TEST TEXTAREA focused")}
+          onKeyDown={e =>
+            console.log("ISOLATED TEST TEXTAREA onKeyDown:", e.key)
+          }
+        />
+
         <div className="absolute bottom-[76px] left-0 max-h-[300px] w-full overflow-auto rounded-xl dark:border-none">
           <ChatCommandInput />
         </div>
@@ -236,6 +308,72 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
           />
         </>
 
+        {/* Temporary debug textarea */}
+        <textarea
+          className="ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring text-md flex w-full resize-none rounded-md border-none bg-transparent px-14 py-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder="DEBUG: Try typing here"
+          value={userInput}
+          onChange={e => {
+            console.log("DEBUG textarea onChange:", e.target.value)
+            setUserInput(e.target.value)
+          }}
+          style={{
+            position: "absolute",
+            top: "-100px",
+            left: "0",
+            zIndex: 9999
+          }}
+        />
+
+        {/* Temporary regular textarea instead of TextareaAutosize */}
+        <textarea
+          ref={chatInputRef}
+          className="ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring text-md flex w-full resize-none rounded-md border-none bg-transparent px-14 py-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder={t(
+            // `Ask anything. Type "@" for assistants, "/" for prompts, "#" for files, and "!" for tools.`
+            `Ask anything. Type @  /  #  !`
+          )}
+          value={userInput}
+          onChange={e => {
+            console.log("Main textarea onChange:", e.target.value)
+            console.log("Event target:", e.target)
+            console.log("Event target disabled:", e.target.disabled)
+            console.log("Event target readonly:", e.target.readOnly)
+            handleInputChange(e.target.value)
+          }}
+          onKeyDown={e => {
+            console.log("Main textarea onKeyDown:", e.key)
+            console.log("Event target:", e.target)
+            handleKeyDown(e)
+          }}
+          onPaste={handlePaste}
+          onCompositionStart={() => {
+            console.log("Composition start - setting isTyping to true")
+            setIsTyping(true)
+          }}
+          onCompositionEnd={() => {
+            console.log("Composition end - setting isTyping to false")
+            setIsTyping(false)
+          }}
+          onFocus={() => console.log("Input focused")}
+          onBlur={() => console.log("Input blurred")}
+          onClick={() => console.log("Input clicked")}
+          onMouseDown={() => console.log("Input mouse down")}
+          onMouseUp={() => console.log("Input mouse up")}
+          rows={1}
+          style={{
+            minHeight: "60px",
+            maxHeight: "200px",
+            border: "2px solid red",
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 0, 0, 0.1)",
+            cursor: "text"
+          }}
+          disabled={false}
+          readOnly={false}
+        />
+
+        {/* Original TextareaAutosize (commented out for testing)
         <TextareaAutosize
           textareaRef={chatInputRef}
           className="ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring text-md flex w-full resize-none rounded-md border-none bg-transparent px-14 py-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
@@ -243,7 +381,10 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             // `Ask anything. Type "@" for assistants, "/" for prompts, "#" for files, and "!" for tools.`
             `Ask anything. Type @  /  #  !`
           )}
-          onValueChange={handleInputChange}
+          onValueChange={(value) => {
+            console.log("TextareaAutosize onValueChange called with:", value)
+            handleInputChange(value)
+          }}
           value={userInput}
           minRows={1}
           maxRows={18}
@@ -251,7 +392,10 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
           onPaste={handlePaste}
           onCompositionStart={() => setIsTyping(true)}
           onCompositionEnd={() => setIsTyping(false)}
+          onFocus={() => console.log("Input focused")}
+          onBlur={() => console.log("Input blurred")}
         />
+        */}
 
         <div className="absolute bottom-[14px] right-3 cursor-pointer hover:opacity-50">
           {isGenerating ? (
