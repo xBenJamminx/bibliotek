@@ -56,7 +56,7 @@ export const useScroll = () => {
 
   const scrollToTop = useCallback(() => {
     if (messagesStartRef.current) {
-      messagesStartRef.current.scrollIntoView({ behavior: "instant" })
+      messagesStartRef.current.scrollIntoView({ behavior: "smooth" })
     }
   }, [])
 
@@ -65,7 +65,7 @@ export const useScroll = () => {
 
     setTimeout(() => {
       if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: "instant" })
+        messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
       }
 
       isAutoScrolling.current = false

@@ -281,18 +281,29 @@ export const useChatHandler = () => {
       // Add both messages to chat immediately
       setChatMessages(prev => [...prev, tempUserMessage, tempAssistantMessage])
 
-      // Simple test - just call the assistant API directly
-      console.log("Calling OpenAI Assistant API...")
+      // Call the appropriate chat API based on the model
+      console.log("Calling chat API...")
 
-      const response = await fetch("/api/send-message", {
+      const chatPayload = {
+        chatSettings,
+        messages: [
+          ...chatMessages.map(msg => ({
+            role: msg.message.role,
+            content: msg.message.content
+          })),
+          {
+            role: "user",
+            content: messageContent
+          }
+        ]
+      }
+
+      const response = await fetch("/api/chat/openai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          message: messageContent,
-          threadId: threadId
-        })
+        body: JSON.stringify(chatPayload)
       })
 
       if (!response.ok) {

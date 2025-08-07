@@ -21,6 +21,7 @@ import { ChatFilesDisplay } from "./chat-files-display"
 import { useChatHandler } from "./chat-hooks/use-chat-handler"
 import { useChatHistoryHandler } from "./chat-hooks/use-chat-history"
 import { usePromptAndCommand } from "./chat-hooks/use-prompt-and-command"
+import { QuickReplyButtons } from "./quick-reply-buttons"
 import { useSelectFileHandler } from "./chat-hooks/use-select-file-handler"
 
 interface ChatInputProps {}
@@ -234,7 +235,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
 
         <>
           <IconCirclePlus
-            className="absolute bottom-[12px] left-3 cursor-pointer p-1 hover:opacity-50"
+            className="absolute bottom-[12px] left-3 cursor-pointer p-1 transition-transform duration-200 hover:scale-110 hover:opacity-50"
             size={32}
             onClick={() => fileInputRef.current?.click()}
           />
@@ -254,7 +255,10 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
 
         <TextareaAutosize
           textareaRef={chatInputRef}
-          className="ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring text-md flex w-full resize-none rounded-md border-none bg-transparent px-14 py-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(
+            "ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring text-md flex w-full resize-none rounded-md border-none bg-transparent px-14 py-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+            isGenerating && "opacity-75"
+          )}
           placeholder={t(
             // `Ask anything. Type "@" for assistants, "/" for prompts, "#" for files, and "!" for tools.`
             `Ask anything. Type @  /  #  !`
@@ -273,19 +277,21 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
           onPaste={handlePaste}
           onCompositionStart={() => setIsTyping(true)}
           onCompositionEnd={() => setIsTyping(false)}
+          disabled={isGenerating}
         />
 
         <div className="absolute bottom-[14px] right-3 cursor-pointer hover:opacity-50">
           {isGenerating ? (
             <IconPlayerStopFilled
-              className="hover:bg-background animate-pulse rounded bg-transparent p-1"
+              className="hover:bg-background animate-pulse rounded bg-transparent p-1 transition-transform duration-200 hover:scale-110"
               onClick={handleStopMessage}
               size={30}
             />
           ) : (
             <IconSend
               className={cn(
-                "bg-primary text-secondary rounded p-1",
+                "bg-primary text-secondary rounded p-1 transition-all duration-200 hover:scale-110",
+                userInput && "hover:shadow-primary/20 hover:shadow-lg",
                 !userInput && "cursor-not-allowed opacity-50"
               )}
               onClick={() => {
@@ -301,6 +307,8 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
           )}
         </div>
       </div>
+
+      <QuickReplyButtons />
     </>
   )
 }

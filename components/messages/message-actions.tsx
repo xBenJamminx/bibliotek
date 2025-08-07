@@ -2,6 +2,7 @@ import { ChatbotUIContext } from "@/context/context"
 import { IconCheck, IconCopy, IconEdit, IconRepeat } from "@tabler/icons-react"
 import { FC, useContext, useEffect, useState } from "react"
 import { WithTooltip } from "../ui/with-tooltip"
+import { toast } from "sonner"
 
 export const MESSAGE_ICON_SIZE = 18
 
@@ -31,6 +32,7 @@ export const MessageActions: FC<MessageActionsProps> = ({
   const handleCopy = () => {
     onCopy()
     setShowCheckmark(true)
+    toast.success("Message copied to clipboard!")
   }
 
   const handleForkChat = async () => {}
@@ -69,7 +71,7 @@ export const MessageActions: FC<MessageActionsProps> = ({
           display={<div>Edit</div>}
           trigger={
             <IconEdit
-              className="cursor-pointer hover:opacity-50"
+              className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-50"
               size={MESSAGE_ICON_SIZE}
               onClick={onEdit}
             />
@@ -87,7 +89,7 @@ export const MessageActions: FC<MessageActionsProps> = ({
               <IconCheck size={MESSAGE_ICON_SIZE} />
             ) : (
               <IconCopy
-                className="cursor-pointer hover:opacity-50"
+                className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-50"
                 size={MESSAGE_ICON_SIZE}
                 onClick={handleCopy}
               />
@@ -103,7 +105,7 @@ export const MessageActions: FC<MessageActionsProps> = ({
           display={<div>Regenerate</div>}
           trigger={
             <IconRepeat
-              className="cursor-pointer hover:opacity-50"
+              className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-50"
               size={MESSAGE_ICON_SIZE}
               onClick={onRegenerate}
             />

@@ -9,6 +9,10 @@ interface MessageMarkdownProps {
 }
 
 export const MessageMarkdown: FC<MessageMarkdownProps> = ({ content }) => {
+  if (!content) {
+    return <div className="text-muted-foreground">No content</div>
+  }
+
   return (
     <MessageMarkdownMemoized
       className="prose dark:prose-invert prose-p:leading-relaxed prose-pre:p-0 min-w-full space-y-6 break-words"

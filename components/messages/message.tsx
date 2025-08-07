@@ -13,6 +13,7 @@ import {
   IconMoodSmile,
   IconPencil
 } from "@tabler/icons-react"
+import { format } from "date-fns"
 import Image from "next/image"
 import { FC, useContext, useEffect, useRef, useState } from "react"
 import { ModelIcon } from "../models/model-icon"
@@ -183,7 +184,7 @@ export const Message: FC<MessageProps> = ({
   return (
     <div
       className={cn(
-        "flex w-full justify-center",
+        "animate-slide-in-up flex w-full justify-center",
         message.role === "user" ? "" : "bg-secondary"
       )}
       onMouseEnter={() => setIsHovering(true)}
@@ -267,37 +268,7 @@ export const Message: FC<MessageProps> = ({
               </div>
             </div>
           )}
-          {!firstTokenReceived &&
-          isGenerating &&
-          isLast &&
-          message.role === "assistant" ? (
-            <>
-              {(() => {
-                switch (toolInUse) {
-                  case "none":
-                    return (
-                      <IconCircleFilled className="animate-pulse" size={20} />
-                    )
-                  case "retrieval":
-                    return (
-                      <div className="flex animate-pulse items-center space-x-2">
-                        <IconFileText size={20} />
-
-                        <div>Searching files...</div>
-                      </div>
-                    )
-                  default:
-                    return (
-                      <div className="flex animate-pulse items-center space-x-2">
-                        <IconBolt size={20} />
-
-                        <div>Using {toolInUse}...</div>
-                      </div>
-                    )
-                }
-              })()}
-            </>
-          ) : isEditing ? (
+          {isEditing ? (
             <TextareaAutosize
               textareaRef={editInputRef}
               className="text-md"
@@ -305,21 +276,50 @@ export const Message: FC<MessageProps> = ({
               onValueChange={setEditedMessage}
               maxRows={20}
             />
+          ) : !firstTokenReceived &&
+            isGenerating &&
+            isLast &&
+            message.role === "assistant" ? (
+            <>
+              {(() => {
+                switch (toolInUse) {
+                  case "none":
+                    return <ThinkingAnimation message="AI is thinking" />
+                  case "retrieval":
+                    return (
+                      <div className="flex animate-pulse items-center space-x-2">
+                        <IconFileText size={20} />
+                        <div>Searching files...</div>
+                      </div>
+                    )
+                  default:
+                    return (
+                      <div className="flex animate-pulse items-center space-x-2">
+                        <IconBolt size={20} />
+                        <div>Using {toolInUse}...</div>
+                      </div>
+                    )
+                }
+              })()}
+            </>
           ) : message.content === "Thinking..." &&
             message.role === "assistant" ? (
-            <div className="flex items-center space-x-2">
-              <div className="flex space-x-1">
-                <div className="size-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.3s]"></div>
-                <div className="size-2 animate-bounce rounded-full bg-blue-500 [animation-delay:-0.15s]"></div>
-                <div className="size-2 animate-bounce rounded-full bg-blue-500"></div>
-              </div>
-              <span className="text-muted-foreground text-sm font-medium">
-                Biblio-Tek is thinking...
-              </span>
-            </div>
+            <ThinkingAnimation message="AI is thinking" />
           ) : (
-            <MessageMarkdown content={message.content} />
+            <>
+              <MessageMarkdown content={message.content} />
+              {!message.content && (
+                <div className="text-muted-foreground text-sm">
+                  No content available
+                </div>
+              )}
+            </>
           )}
+        </div>
+
+        {/* Message timestamp */}
+        <div className="text-muted-foreground mt-2 text-xs">
+          {format(new Date(message.created_at), "MMM d, h:mm a")}
         </div>
 
         {fileItems.length > 0 && (
