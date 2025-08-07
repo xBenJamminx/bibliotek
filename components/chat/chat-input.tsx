@@ -222,7 +222,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             )}
 
             <div className="text-sm font-bold">
-              Talking to {selectedAssistant?.name || "Particle Ink Assistant"}
+              Talking to {selectedAssistant?.name || "Biblio-Tek"}
             </div>
           </div>
         )}

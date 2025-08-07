@@ -218,16 +218,49 @@ export const useChatHandler = () => {
       const newAbortController = new AbortController()
       setAbortController(newAbortController)
 
+      // Ensure a chat exists so history can persist
+      const defaultChatSettings = {
+        model: (chatSettings?.model ?? "gpt-4o-mini") as LLMID,
+        prompt: chatSettings?.prompt ?? "You are a helpful AI assistant.",
+        temperature: chatSettings?.temperature ?? 0.5,
+        contextLength: chatSettings?.contextLength ?? 4096,
+        includeProfileContext: chatSettings?.includeProfileContext ?? false,
+        includeWorkspaceInstructions:
+          chatSettings?.includeWorkspaceInstructions ?? false,
+        embeddingsProvider: chatSettings?.embeddingsProvider ?? "openai"
+      }
+
+      let currentChat = selectedChat
+      if (!currentChat && profile && selectedWorkspace) {
+        try {
+          currentChat = await handleCreateChat(
+            defaultChatSettings,
+            profile,
+            selectedWorkspace,
+            messageContent,
+            null,
+            [],
+            setSelectedChat,
+            setChats,
+            setChatFiles,
+            true
+          )
+          setSelectedChat(currentChat)
+        } catch (error) {
+          console.error("Failed to create chat:", error)
+        }
+      }
+
       // Add the user message immediately
       const currentTime = Date.now()
       const tempUserMessage: ChatMessage = {
         message: {
           id: `user-${currentTime}`,
-          chat_id: "temp",
+          chat_id: currentChat?.id || "temp",
           assistant_id: null,
           user_id: profile?.user_id || "",
           content: messageContent,
-          model: "gpt-4o-mini",
+          model: defaultChatSettings.model,
           role: "user",
           sequence_number: currentTime,
           image_paths: [],
@@ -241,11 +274,11 @@ export const useChatHandler = () => {
       const tempAssistantMessage: ChatMessage = {
         message: {
           id: `assistant-${currentTime}`,
-          chat_id: "temp",
+          chat_id: currentChat?.id || "temp",
           assistant_id: null,
           user_id: profile?.user_id || "",
           content: "Thinking...",
-          model: "gpt-4o-mini",
+          model: defaultChatSettings.model,
           role: "assistant",
           sequence_number: currentTime + 1,
           image_paths: [],
@@ -280,9 +313,10 @@ export const useChatHandler = () => {
               })),
               { role: "user", content: messageContent }
             ],
-            model: "gpt-4o-mini",
-            temperature: 0.5,
+            model: defaultChatSettings.model,
+            temperature: defaultChatSettings.temperature,
             assistantId: process.env.ASSISTANT_ID,
+            workspaceId: selectedWorkspace?.id,
             stream: true
           }),
           signal: newAbortController.signal
@@ -331,6 +365,35 @@ export const useChatHandler = () => {
                     console.log("Chat completed successfully:", fullContent)
                     setIsGenerating(false)
                     setFirstTokenReceived(false)
+
+                    // Persist messages to DB if we have a chat
+                    try {
+                      if (currentChat && profile) {
+                        const modelData = LLM_LIST.find(
+                          llm => llm.modelId === defaultChatSettings.model
+                        )
+                        if (modelData) {
+                          await handleCreateMessages(
+                            chatMessages,
+                            currentChat,
+                            profile,
+                            modelData,
+                            messageContent,
+                            fullContent,
+                            [],
+                            isRegeneration,
+                            [],
+                            setChatMessages,
+                            setChatFileItems,
+                            setChatImages,
+                            null
+                          )
+                        }
+                      }
+                    } catch (persistError) {
+                      console.error("Failed to persist messages:", persistError)
+                    }
+
                     return
                   }
                 } catch (error) {
@@ -339,7 +402,7 @@ export const useChatHandler = () => {
               }
             }
           } catch (error) {
-            if (error.name === "AbortError") {
+            if ((error as any).name === "AbortError") {
               console.log("Request was aborted")
               return
             }
@@ -349,7 +412,7 @@ export const useChatHandler = () => {
 
         setIsGenerating(false)
         setFirstTokenReceived(false)
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error in chat:", error)
         setIsGenerating(false)
         setFirstTokenReceived(false)
