@@ -25,6 +25,7 @@ import {
   processResponse,
   validateChatSettings
 } from "../chat-helpers"
+import { toast } from "sonner"
 
 export const useChatHandler = () => {
   const router = useRouter()
@@ -100,12 +101,8 @@ export const useChatHandler = () => {
     setNewMessageFiles([])
     setNewMessageImages([])
     setShowFilesDisplay(false)
-    setIsPromptPickerOpen(false)
-    setIsFilePickerOpen(false)
 
-    setSelectedTools([])
-    setToolInUse("none")
-
+    // Reset chat settings based on selected preset or assistant
     if (selectedAssistant) {
       setChatSettings({
         model: selectedAssistant.model as LLMID,
@@ -119,37 +116,6 @@ export const useChatHandler = () => {
           | "openai"
           | "local"
       })
-
-      let allFiles = []
-
-      const assistantFiles = (
-        await getAssistantFilesByAssistantId(selectedAssistant.id)
-      ).files
-      allFiles = [...assistantFiles]
-      const assistantCollections = (
-        await getAssistantCollectionsByAssistantId(selectedAssistant.id)
-      ).collections
-      for (const collection of assistantCollections) {
-        const collectionFiles = (
-          await getCollectionFilesByCollectionId(collection.id)
-        ).files
-        allFiles = [...allFiles, ...collectionFiles]
-      }
-      const assistantTools = (
-        await getAssistantToolsByAssistantId(selectedAssistant.id)
-      ).tools
-
-      setSelectedTools(assistantTools)
-      setChatFiles(
-        allFiles.map(file => ({
-          id: file.id,
-          name: file.name,
-          type: file.type,
-          file: null
-        }))
-      )
-
-      if (allFiles.length > 0) setShowFilesDisplay(true)
     } else if (selectedPreset) {
       setChatSettings({
         model: selectedPreset.model as LLMID,
@@ -237,8 +203,8 @@ export const useChatHandler = () => {
         )
         console.log("Created chat:", currentChat.id)
 
-        // Navigate to the chat URL so messages will be loaded
-        router.push(`/${selectedWorkspace.id}/chat/${currentChat.id}`)
+        // Set the selected chat so we can use it for message persistence
+        setSelectedChat(currentChat)
       }
 
       // Add the user message immediately
@@ -281,216 +247,80 @@ export const useChatHandler = () => {
       // Add both messages to chat immediately
       setChatMessages(prev => [...prev, tempUserMessage, tempAssistantMessage])
 
-      // Call the appropriate chat API based on the model
-      console.log("Calling chat API...")
+      // Use the existing chat helpers infrastructure
+      console.log("Using chat helpers...")
 
-      const chatPayload = {
+      const newAbortController = new AbortController()
+      setAbortController(newAbortController)
+
+      const payload = {
         chatSettings,
-        messages: [
-          ...chatMessages.map(msg => ({
-            role: msg.message.role,
-            content: msg.message.content
-          })),
-          {
-            role: "user",
-            content: messageContent
-          }
-        ]
+        chatMessages,
+        messageContent,
+        selectedAssistant,
+        selectedTools,
+        chatImages,
+        newMessageFiles: [],
+        isRegeneration
       }
 
-      const response = await fetch("/api/chat/openai", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(chatPayload)
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to send message")
+      const modelData = LLM_LIST.find(llm => llm.modelId === chatSettings.model)
+      if (!modelData) {
+        throw new Error("Model not found")
       }
 
-      // Check if response is streaming
-      const contentType = response.headers.get("content-type")
-      console.log("Response content type:", contentType)
+      try {
+        const finalAssistantContent = await handleHostedChat(
+          payload,
+          profile!,
+          modelData,
+          tempAssistantMessage,
+          isRegeneration,
+          newAbortController,
+          [], // newMessageImages
+          chatImages,
+          setIsGenerating,
+          setFirstTokenReceived,
+          setChatMessages,
+          setToolInUse
+        )
 
-      if (contentType?.includes("text/event-stream")) {
-        // Handle streaming response
-        const reader = response.body?.getReader()
-        if (!reader) {
-          throw new Error("No response body")
-        }
+        console.log("Chat completed successfully:", finalAssistantContent)
 
-        let assistantContent = ""
-        let finalThreadId = threadId
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-
-            const chunk = new TextDecoder().decode(value)
-            console.log("Received chunk:", chunk)
-            const lines = chunk.split("\n")
-
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                try {
-                  const data = JSON.parse(line.slice(6))
-                  console.log("Parsed data:", data)
-
-                  if (data.type === "content" && data.content) {
-                    assistantContent += data.content
-                    console.log("Updated assistant content:", assistantContent)
-                    // Update the assistant message with accumulated content
-                    setChatMessages(prev =>
-                      prev.map(msg =>
-                        msg.message.id === `assistant-${currentTime}`
-                          ? {
-                              ...msg,
-                              message: {
-                                ...msg.message,
-                                content: assistantContent
-                              }
-                            }
-                          : msg
-                      )
-                    )
-                  } else if (data.type === "done") {
-                    console.log("Stream completed")
-
-                    // Persist messages to database
-                    if (currentChat && profile) {
-                      try {
-                        const userMessage = await createMessage({
-                          chat_id: currentChat.id,
-                          assistant_id: null,
-                          user_id: profile.user_id,
-                          content: messageContent,
-                          model: "gpt-4-turbo-preview",
-                          role: "user",
-                          sequence_number: chatMessages.length,
-                          image_paths: []
-                        })
-
-                        const assistantMessage = await createMessage({
-                          chat_id: currentChat.id,
-                          assistant_id: null,
-                          user_id: profile.user_id,
-                          content: assistantContent,
-                          model: "gpt-4-turbo-preview",
-                          role: "assistant",
-                          sequence_number: chatMessages.length + 1,
-                          image_paths: []
-                        })
-
-                        // Update the chat messages with the persisted messages
-                        setChatMessages(prev =>
-                          prev.map(msg =>
-                            msg.message.id === `user-${currentTime}`
-                              ? { ...msg, message: userMessage }
-                              : msg.message.id === `assistant-${currentTime}`
-                                ? { ...msg, message: assistantMessage }
-                                : msg
-                          )
-                        )
-
-                        // Reload all messages from database to ensure consistency
-                        await loadChatMessages(currentChat.id)
-                      } catch (error) {
-                        console.error("Error persisting messages:", error)
-                      }
-                    }
-
-                    if (data.threadId) {
-                      finalThreadId = data.threadId
-                      setThreadId(data.threadId)
-                    }
-                    break
-                  }
-                } catch (e) {
-                  console.error("Error parsing stream data:", e)
-                }
-              }
-            }
-          }
-        } finally {
-          reader.releaseLock()
-        }
-      } else {
-        // Fallback to JSON response
-        console.log("Using JSON response fallback")
-        const data = await response.json()
-        console.log("JSON response:", data)
-
-        // Update the assistant message with the full response
-        const finalAssistantContent = data.message || "No response received"
-
-        // Persist messages to database
-        if (currentChat && profile) {
+        // Persist messages to database after streaming is complete
+        if (currentChat && profile && finalAssistantContent) {
           try {
-            const userMessage = await createMessage({
-              chat_id: currentChat.id,
-              assistant_id: null,
-              user_id: profile.user_id,
-              content: messageContent,
-              model: "gpt-4-turbo-preview",
-              role: "user",
-              sequence_number: chatMessages.length,
-              image_paths: []
-            })
-
-            const assistantMessage = await createMessage({
-              chat_id: currentChat.id,
-              assistant_id: null,
-              user_id: profile.user_id,
-              content: finalAssistantContent,
-              model: "gpt-4-turbo-preview",
-              role: "assistant",
-              sequence_number: chatMessages.length + 1,
-              image_paths: []
-            })
-
-            // Update the chat messages with the persisted messages
-            setChatMessages(prev =>
-              prev.map(msg =>
-                msg.message.id === `user-${currentTime}`
-                  ? { ...msg, message: userMessage }
-                  : msg.message.id === `assistant-${currentTime}`
-                    ? { ...msg, message: assistantMessage }
-                    : msg
-              )
+            await handleCreateMessages(
+              chatMessages,
+              currentChat,
+              profile,
+              modelData,
+              messageContent,
+              finalAssistantContent,
+              [], // newMessageImages
+              isRegeneration,
+              [], // retrievedFileItems
+              setChatMessages,
+              setChatFileItems,
+              setChatImages,
+              selectedAssistant
             )
-
-            // Reload all messages from database to ensure consistency
-            await loadChatMessages(currentChat.id)
+            console.log("Messages persisted to database successfully")
           } catch (error) {
             console.error("Error persisting messages:", error)
+            toast.error("Failed to save messages to database")
           }
-        } else {
-          // Fallback to just updating the content
-          setChatMessages(prev =>
-            prev.map(msg =>
-              msg.message.id === `assistant-${currentTime}`
-                ? {
-                    ...msg,
-                    message: {
-                      ...msg.message,
-                      content: finalAssistantContent
-                    }
-                  }
-                : msg
-            )
-          )
         }
+      } catch (error) {
+        console.error("Error in chat:", error)
+        setIsGenerating(false)
+        setFirstTokenReceived(false)
 
-        if (data.threadId) {
-          setThreadId(data.threadId)
-        }
+        // Remove the temporary messages on error
+        setChatMessages(prev => prev.slice(0, -2))
+
+        toast.error("Failed to send message. Please try again.")
       }
-
-      setIsGenerating(false)
     } catch (error) {
       console.error("Error in handleSendMessage:", error)
       setIsGenerating(false)

@@ -16,16 +16,18 @@ export const getMessageById = async (messageId: string) => {
 }
 
 export const getMessagesByChatId = async (chatId: string) => {
-  const { data: messages } = await supabase
+  const { data: messages, error } = await supabase
     .from("messages")
     .select("*")
     .eq("chat_id", chatId)
+    .order("sequence_number", { ascending: true })
 
-  if (!messages) {
-    throw new Error("Messages not found")
+  if (error) {
+    console.error("Error fetching messages:", error)
+    throw new Error(error.message)
   }
 
-  return messages
+  return messages || []
 }
 
 export const createMessage = async (message: TablesInsert<"messages">) => {
