@@ -204,6 +204,44 @@ export const useChatHandler = () => {
       setUserInput("")
       setIsGenerating(true)
 
+      // Always use OpenAI assistant for this setup
+      const isOpenaiAssistant = true
+
+      // If no assistant is selected, create a default OpenAI assistant
+      if (!selectedAssistant) {
+        const defaultAssistant = {
+          id: process.env.ASSISTANT_ID || "asst_default",
+          name: "Particle Ink Assistant",
+          description: "Your AI assistant with file retrieval capabilities",
+          model: "gpt-4o-mini",
+          prompt:
+            "You are a helpful AI assistant with access to files and knowledge base.",
+          temperature: 0.5,
+          context_length: 4096,
+          include_profile_context: false,
+          include_workspace_instructions: false,
+          embeddings_provider: "openai",
+          image_path: "",
+          created_at: "",
+          updated_at: "",
+          user_id: "",
+          workspace_id: ""
+        } as Tables<"assistants">
+
+        setSelectedAssistant(defaultAssistant)
+
+        setChatSettings({
+          model: "gpt-4o-mini" as LLMID,
+          prompt:
+            "You are a helpful AI assistant with access to files and knowledge base.",
+          temperature: 0.5,
+          contextLength: 4096,
+          includeProfileContext: false,
+          includeWorkspaceInstructions: false,
+          embeddingsProvider: "openai"
+        })
+      }
+
       // Create a chat if one doesn't exist
       let currentChat = selectedChat
       if (!currentChat && profile && selectedWorkspace) {
@@ -217,7 +255,8 @@ export const useChatHandler = () => {
           [], // newMessageFiles
           setSelectedChat,
           setChats,
-          setChatFiles
+          setChatFiles,
+          isOpenaiAssistant
         )
         console.log("Created chat:", currentChat.id)
 
@@ -280,9 +319,10 @@ export const useChatHandler = () => {
       const newAbortController = new AbortController()
       setAbortController(newAbortController)
 
-      // Handle retrieval if enabled and files are available
+      // Handle retrieval if enabled and files are available (only for local assistants)
       let retrievedFileItems: Tables<"file_items">[] = []
       if (
+        !isOpenaiAssistant &&
         useRetrieval &&
         (chatFiles.length > 0 || newMessageFiles.length > 0)
       ) {
@@ -299,9 +339,6 @@ export const useChatHandler = () => {
           console.error("Error during retrieval:", error)
         }
       }
-
-      // Check if we're using an OpenAI assistant
-      const isOpenaiAssistant = selectedAssistant?.id?.startsWith("asst_")
 
       const payload = {
         chatSettings,
@@ -323,9 +360,6 @@ export const useChatHandler = () => {
       }
 
       try {
-        // Check if we're using an OpenAI assistant
-        const isOpenaiAssistant = selectedAssistant?.id?.startsWith("asst_")
-
         let finalAssistantContent: string
         if (isOpenaiAssistant) {
           // Use OpenAI Assistants API

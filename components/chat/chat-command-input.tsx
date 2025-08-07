@@ -1,6 +1,5 @@
 import { ChatbotUIContext } from "@/context/context"
 import { FC, useContext } from "react"
-import { AssistantPicker } from "./assistant-picker"
 import { usePromptAndCommand } from "./chat-hooks/use-prompt-and-command"
 import { FilePicker } from "./file-picker"
 import { PromptPicker } from "./prompt-picker"
@@ -41,8 +40,6 @@ export const ChatCommandInput: FC<ChatCommandInputProps> = ({}) => {
       />
 
       <ToolPicker />
-
-      <AssistantPicker />
     </>
   )
 }

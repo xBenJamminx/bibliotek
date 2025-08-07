@@ -8,10 +8,12 @@ export async function GET() {
   try {
     const profile = await getServerProfile()
 
-    checkApiKey(profile.openai_api_key, "OpenAI")
+    // Use environment variable directly for OpenAI API key
+    const openaiApiKey = process.env.OPENAI_API_KEY
+    checkApiKey(openaiApiKey, "OpenAI")
 
     const openai = new OpenAI({
-      apiKey: profile.openai_api_key || "",
+      apiKey: openaiApiKey || "",
       organization: profile.openai_organization_id
     })
 

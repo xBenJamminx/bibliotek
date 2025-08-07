@@ -6,6 +6,7 @@ export const runtime = "edge"
 interface SendMessageRequest {
   threadId?: string
   message: string
+  assistantId?: string
 }
 
 interface SendMessageResponse {
@@ -24,7 +25,7 @@ interface StreamResponse {
 export async function POST(request: NextRequest) {
   try {
     const body: SendMessageRequest = await request.json()
-    const { threadId, message } = body
+    const { threadId, message, assistantId: requestAssistantId } = body
 
     if (!message) {
       return NextResponse.json(
@@ -43,10 +44,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get Assistant ID from environment
-    const assistantId = process.env.ASSISTANT_ID
+    // Get Assistant ID from request or environment
+    const assistantId = requestAssistantId || process.env.ASSISTANT_ID
     if (!assistantId) {
-      console.error("ASSISTANT_ID not found in environment variables")
+      console.error(
+        "Assistant ID not found in request or environment variables"
+      )
       return NextResponse.json(
         { error: "Assistant ID not configured" },
         { status: 500 }

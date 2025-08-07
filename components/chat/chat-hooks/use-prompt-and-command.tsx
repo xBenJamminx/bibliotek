@@ -30,19 +30,14 @@ export const usePromptAndCommand = () => {
   } = useContext(ChatbotUIContext)
 
   const handleInputChange = (value: string) => {
-    const atTextRegex = /@([^ ]*)$/
     const slashTextRegex = /\/([^ ]*)$/
     const hashtagTextRegex = /#([^ ]*)$/
     const toolTextRegex = /!([^ ]*)$/
-    const atMatch = value.match(atTextRegex)
     const slashMatch = value.match(slashTextRegex)
     const hashtagMatch = value.match(hashtagTextRegex)
     const toolMatch = value.match(toolTextRegex)
 
-    if (atMatch) {
-      setIsAssistantPickerOpen(true)
-      setAtCommand(atMatch[1])
-    } else if (slashMatch) {
+    if (slashMatch) {
       setIsPromptPickerOpen(true)
       setSlashCommand(slashMatch[1])
     } else if (hashtagMatch) {

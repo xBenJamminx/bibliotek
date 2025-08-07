@@ -64,11 +64,11 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
         handleOpenChange(false)
       } else if (e.key === "Enter") {
         e.preventDefault()
-        callSelectAssistant(filteredAssistants[index])
+        callSelectAssistant(allAssistants[index])
       } else if (
         (e.key === "Tab" || e.key === "ArrowDown") &&
         !e.shiftKey &&
-        index === filteredAssistants.length - 1
+        index === allAssistants.length - 1
       ) {
         e.preventDefault()
         itemsRef.current[0]?.focus()

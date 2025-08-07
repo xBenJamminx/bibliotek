@@ -164,7 +164,8 @@ export const handleOpenaiAssistantChat = async (
       },
       body: JSON.stringify({
         threadId,
-        message: messageContent
+        message: messageContent,
+        assistantId
       }),
       signal: newAbortController.signal
     })
@@ -459,7 +460,8 @@ export const handleCreateChat = async (
   newMessageFiles: ChatFile[],
   setSelectedChat: React.Dispatch<React.SetStateAction<Tables<"chats"> | null>>,
   setChats: React.Dispatch<React.SetStateAction<Tables<"chats">[]>>,
-  setChatFiles: React.Dispatch<React.SetStateAction<ChatFile[]>>
+  setChatFiles: React.Dispatch<React.SetStateAction<ChatFile[]>>,
+  isOpenaiAssistant: boolean = false
 ) => {
   const createdChat = await createChat({
     user_id: profile.user_id,
@@ -478,15 +480,18 @@ export const handleCreateChat = async (
   setSelectedChat(createdChat)
   setChats(chats => [createdChat, ...chats])
 
-  await createChatFiles(
-    newMessageFiles.map(file => ({
-      user_id: profile.user_id,
-      chat_id: createdChat.id,
-      file_id: file.id
-    }))
-  )
+  // Only create chat files for local assistants
+  if (!isOpenaiAssistant && newMessageFiles.length > 0) {
+    await createChatFiles(
+      newMessageFiles.map(file => ({
+        user_id: profile.user_id,
+        chat_id: createdChat.id,
+        file_id: file.id
+      }))
+    )
 
-  setChatFiles(prev => [...prev, ...newMessageFiles])
+    setChatFiles(prev => [...prev, ...newMessageFiles])
+  }
 
   return createdChat
 }

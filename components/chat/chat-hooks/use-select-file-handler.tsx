@@ -45,11 +45,16 @@ export const useSelectFileHandler = () => {
     )
   }
 
-  const handleSelectDeviceFile = async (file: File) => {
+  const handleSelectDeviceFile = async (
+    file: File,
+    autoAttach: boolean = true
+  ) => {
     if (!profile || !selectedWorkspace || !chatSettings) return
 
-    setShowFilesDisplay(true)
-    setUseRetrieval(true)
+    if (autoAttach) {
+      setShowFilesDisplay(true)
+      setUseRetrieval(true)
+    }
 
     if (file) {
       let simplifiedFileType = file.type.split("/")[1]

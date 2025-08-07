@@ -173,7 +173,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
         }
         const file = item.getAsFile()
         if (!file) return
-        handleSelectDeviceFile(file)
+        handleSelectDeviceFile(file, false)
       }
     }
   }
@@ -222,7 +222,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             )}
 
             <div className="text-sm font-bold">
-              Talking to {selectedAssistant?.name || "Biblio-Tek"}
+              Talking to {selectedAssistant?.name || "Particle Ink Assistant"}
             </div>
           </div>
         )}
@@ -247,7 +247,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             type="file"
             onChange={e => {
               if (!e.target.files) return
-              handleSelectDeviceFile(e.target.files[0])
+              handleSelectDeviceFile(e.target.files[0], false)
             }}
             accept={filesToAccept}
           />
@@ -260,8 +260,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             isGenerating && "opacity-75"
           )}
           placeholder={t(
-            // `Ask anything. Type "@" for assistants, "/" for prompts, "#" for files, and "!" for tools.`
-            `Ask anything. Type @  /  #  !`
+            `Ask anything. Type "/" for prompts, "#" for files, and "!" for tools.`
           )}
           onValueChange={value => {
             console.log("TextareaAutosize onValueChange:", value)

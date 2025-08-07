@@ -43,7 +43,7 @@ export const Dashboard: FC<DashboardProps> = ({ children }) => {
     const files = event.dataTransfer.files
     const file = files[0]
 
-    handleSelectDeviceFile(file)
+    handleSelectDeviceFile(file, false)
 
     setIsDragging(false)
   }
