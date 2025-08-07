@@ -21,6 +21,7 @@ import {
   handleCreateMessages,
   handleHostedChat,
   handleLocalChat,
+  handleOpenaiAssistantChat,
   handleRetrieval,
   processResponse,
   validateChatSettings
@@ -83,6 +84,19 @@ export const useChatHandler = () => {
       chatInputRef.current?.focus()
     }
   }, [isPromptPickerOpen, isFilePickerOpen, isToolPickerOpen])
+
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortController && !abortController.signal.aborted) {
+        try {
+          abortController.abort()
+        } catch (error) {
+          console.error("Error cleaning up abort controller on unmount:", error)
+        }
+      }
+    }
+  }, [abortController])
 
   const handleNewChat = async () => {
     if (!selectedWorkspace) return
@@ -156,8 +170,12 @@ export const useChatHandler = () => {
   }
 
   const handleStopMessage = () => {
-    if (abortController) {
-      abortController.abort()
+    if (abortController && !abortController.signal.aborted) {
+      try {
+        abortController.abort()
+      } catch (error) {
+        console.error("Error aborting controller:", error)
+      }
     }
   }
 
@@ -250,8 +268,40 @@ export const useChatHandler = () => {
       // Use the existing chat helpers infrastructure
       console.log("Using chat helpers...")
 
+      // Clean up any existing abort controller
+      if (abortController && !abortController.signal.aborted) {
+        try {
+          abortController.abort()
+        } catch (error) {
+          console.error("Error cleaning up previous abort controller:", error)
+        }
+      }
+
       const newAbortController = new AbortController()
       setAbortController(newAbortController)
+
+      // Handle retrieval if enabled and files are available
+      let retrievedFileItems: Tables<"file_items">[] = []
+      if (
+        useRetrieval &&
+        (chatFiles.length > 0 || newMessageFiles.length > 0)
+      ) {
+        try {
+          retrievedFileItems = await handleRetrieval(
+            messageContent,
+            newMessageFiles,
+            chatFiles,
+            chatSettings.embeddingsProvider,
+            sourceCount
+          )
+          console.log("Retrieved file items:", retrievedFileItems.length)
+        } catch (error) {
+          console.error("Error during retrieval:", error)
+        }
+      }
+
+      // Check if we're using an OpenAI assistant
+      const isOpenaiAssistant = selectedAssistant?.id?.startsWith("asst_")
 
       const payload = {
         chatSettings,
@@ -260,7 +310,10 @@ export const useChatHandler = () => {
         selectedAssistant,
         selectedTools,
         chatImages,
-        newMessageFiles: [],
+        // Don't include files for OpenAI assistants - they use their own vector store
+        newMessageFiles: isOpenaiAssistant ? [] : newMessageFiles,
+        messageFileItems: isOpenaiAssistant ? [] : retrievedFileItems,
+        chatFileItems: isOpenaiAssistant ? [] : chatFileItems,
         isRegeneration
       }
 
@@ -270,20 +323,39 @@ export const useChatHandler = () => {
       }
 
       try {
-        const finalAssistantContent = await handleHostedChat(
-          payload,
-          profile!,
-          modelData,
-          tempAssistantMessage,
-          isRegeneration,
-          newAbortController,
-          [], // newMessageImages
-          chatImages,
-          setIsGenerating,
-          setFirstTokenReceived,
-          setChatMessages,
-          setToolInUse
-        )
+        // Check if we're using an OpenAI assistant
+        const isOpenaiAssistant = selectedAssistant?.id?.startsWith("asst_")
+
+        let finalAssistantContent: string
+        if (isOpenaiAssistant) {
+          // Use OpenAI Assistants API
+          finalAssistantContent = await handleOpenaiAssistantChat(
+            messageContent,
+            selectedAssistant.id,
+            threadId,
+            newAbortController,
+            setIsGenerating,
+            setFirstTokenReceived,
+            setChatMessages,
+            setThreadId
+          )
+        } else {
+          // Use regular chat completion
+          finalAssistantContent = await handleHostedChat(
+            payload,
+            profile!,
+            modelData,
+            tempAssistantMessage,
+            isRegeneration,
+            newAbortController,
+            [], // newMessageImages
+            chatImages,
+            setIsGenerating,
+            setFirstTokenReceived,
+            setChatMessages,
+            setToolInUse
+          )
+        }
 
         console.log("Chat completed successfully:", finalAssistantContent)
 

@@ -3,10 +3,27 @@ export async function consumeReadableStream(
   callback: (chunk: string) => void,
   signal: AbortSignal
 ): Promise<void> {
+  // Check if signal is already aborted
+  if (signal.aborted) {
+    console.log("Signal already aborted, skipping stream consumption")
+    return
+  }
+
   const reader = stream.getReader()
   const decoder = new TextDecoder()
+  let isReaderReleased = false
 
-  signal.addEventListener("abort", () => reader.cancel(), { once: true })
+  const abortHandler = () => {
+    if (!isReaderReleased) {
+      try {
+        reader.cancel()
+      } catch (error) {
+        console.error("Error canceling reader:", error)
+      }
+    }
+  }
+
+  signal.addEventListener("abort", abortHandler, { once: true })
 
   try {
     while (true) {
@@ -27,6 +44,11 @@ export async function consumeReadableStream(
       console.error("Error consuming stream:", error)
     }
   } finally {
-    reader.releaseLock()
+    isReaderReleased = true
+    try {
+      reader.releaseLock()
+    } catch (error) {
+      console.error("Error releasing reader lock:", error)
+    }
   }
 }

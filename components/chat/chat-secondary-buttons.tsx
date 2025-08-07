@@ -13,65 +13,65 @@ export const ChatSecondaryButtons: FC<ChatSecondaryButtonsProps> = ({}) => {
 
   return (
     <>
+      {/* New Chat button - always visible */}
+      <WithTooltip
+        delayDuration={200}
+        display={<div>Start a new chat</div>}
+        trigger={
+          <div className="mt-1">
+            <IconMessagePlus
+              className="cursor-pointer transition-transform duration-200 hover:scale-110 hover:opacity-50"
+              size={24}
+              onClick={handleNewChat}
+            />
+          </div>
+        }
+      />
+
+      {/* Chat Info button - only visible when there's a selected chat */}
       {selectedChat && (
-        <>
-          <WithTooltip
-            delayDuration={200}
-            display={
-              <div>
-                <div className="text-xl font-bold">Chat Info</div>
+        <WithTooltip
+          delayDuration={200}
+          display={
+            <div>
+              <div className="text-xl font-bold">Chat Info</div>
 
-                <div className="mx-auto mt-2 max-w-xs space-y-2 sm:max-w-sm md:max-w-md lg:max-w-lg">
-                  <div>Model: {selectedChat.model}</div>
-                  <div>Prompt: {selectedChat.prompt}</div>
+              <div className="mx-auto mt-2 max-w-xs space-y-2 sm:max-w-sm md:max-w-md lg:max-w-lg">
+                <div>Model: {selectedChat.model}</div>
+                <div>Prompt: {selectedChat.prompt}</div>
 
-                  <div>Temperature: {selectedChat.temperature}</div>
-                  <div>Context Length: {selectedChat.context_length}</div>
+                <div>Temperature: {selectedChat.temperature}</div>
+                <div>Context Length: {selectedChat.context_length}</div>
 
-                  <div>
-                    Profile Context:{" "}
-                    {selectedChat.include_profile_context
-                      ? "Enabled"
-                      : "Disabled"}
-                  </div>
-                  <div>
-                    {" "}
-                    Workspace Instructions:{" "}
-                    {selectedChat.include_workspace_instructions
-                      ? "Enabled"
-                      : "Disabled"}
-                  </div>
+                <div>
+                  Profile Context:{" "}
+                  {selectedChat.include_profile_context
+                    ? "Enabled"
+                    : "Disabled"}
+                </div>
+                <div>
+                  {" "}
+                  Workspace Instructions:{" "}
+                  {selectedChat.include_workspace_instructions
+                    ? "Enabled"
+                    : "Disabled"}
+                </div>
 
-                  <div>
-                    Embeddings Provider: {selectedChat.embeddings_provider}
-                  </div>
+                <div>
+                  Embeddings Provider: {selectedChat.embeddings_provider}
                 </div>
               </div>
-            }
-            trigger={
-              <div className="mt-1">
-                <IconInfoCircle
-                  className="cursor-default hover:opacity-50"
-                  size={24}
-                />
-              </div>
-            }
-          />
-
-          <WithTooltip
-            delayDuration={200}
-            display={<div>Start a new chat</div>}
-            trigger={
-              <div className="mt-1">
-                <IconMessagePlus
-                  className="cursor-pointer hover:opacity-50"
-                  size={24}
-                  onClick={handleNewChat}
-                />
-              </div>
-            }
-          />
-        </>
+            </div>
+          }
+          trigger={
+            <div className="mt-1">
+              <IconInfoCircle
+                className="cursor-default hover:opacity-50"
+                size={24}
+              />
+            </div>
+          }
+        />
       )}
     </>
   )

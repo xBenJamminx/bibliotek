@@ -34,6 +34,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const {
     setChatSettings,
     setAssistants,
+    setOpenaiAssistants,
     setAssistantImages,
     setChats,
     setCollections,
@@ -96,6 +97,18 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
     const assistantData = await getAssistantWorkspacesByWorkspaceId(workspaceId)
     setAssistants(assistantData.assistants)
+
+    // Load OpenAI assistants
+    try {
+      const openaiAssistantsResponse = await fetch("/api/assistants/openai")
+      if (openaiAssistantsResponse.ok) {
+        const { assistants: openaiAssistants } =
+          await openaiAssistantsResponse.json()
+        setOpenaiAssistants(openaiAssistants)
+      }
+    } catch (error) {
+      console.error("Error loading OpenAI assistants:", error)
+    }
 
     for (const assistant of assistantData.assistants) {
       let url = ""

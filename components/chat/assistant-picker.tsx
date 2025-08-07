@@ -10,6 +10,7 @@ interface AssistantPickerProps {}
 export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
   const {
     assistants,
+    openaiAssistants,
     assistantImages,
     focusAssistant,
     atCommand,
@@ -17,7 +18,8 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
     setIsAssistantPickerOpen
   } = useContext(ChatbotUIContext)
 
-  const { handleSelectAssistant } = usePromptAndCommand()
+  const { handleSelectAssistant, handleSelectOpenaiAssistant } =
+    usePromptAndCommand()
 
   const itemsRef = useRef<(HTMLDivElement | null)[]>([])
 
@@ -27,16 +29,31 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
     }
   }, [focusAssistant])
 
-  const filteredAssistants = assistants.filter(assistant =>
+  const filteredLocalAssistants = assistants.filter(assistant =>
     assistant.name.toLowerCase().includes(atCommand.toLowerCase())
   )
+
+  const filteredOpenaiAssistants = openaiAssistants.filter(assistant =>
+    assistant.name.toLowerCase().includes(atCommand.toLowerCase())
+  )
+
+  const allAssistants = [
+    ...filteredLocalAssistants,
+    ...filteredOpenaiAssistants
+  ]
 
   const handleOpenChange = (isOpen: boolean) => {
     setIsAssistantPickerOpen(isOpen)
   }
 
-  const callSelectAssistant = (assistant: Tables<"assistants">) => {
-    handleSelectAssistant(assistant)
+  const callSelectAssistant = (assistant: Tables<"assistants"> | any) => {
+    if (assistant.id.startsWith("asst_")) {
+      // OpenAI assistant
+      handleSelectOpenaiAssistant(assistant)
+    } else {
+      // Local assistant
+      handleSelectAssistant(assistant as Tables<"assistants">)
+    }
     handleOpenChange(false)
   }
 
@@ -75,13 +92,13 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
     <>
       {isAssistantPickerOpen && (
         <div className="bg-background flex flex-col space-y-1 rounded-xl border-2 p-2 text-sm">
-          {filteredAssistants.length === 0 ? (
+          {allAssistants.length === 0 ? (
             <div className="text-md flex h-14 cursor-pointer items-center justify-center italic hover:opacity-50">
               No matching assistants.
             </div>
           ) : (
             <>
-              {filteredAssistants.map((item, index) => (
+              {allAssistants.map((item, index) => (
                 <div
                   key={item.id}
                   ref={ref => {
@@ -89,12 +106,15 @@ export const AssistantPicker: FC<AssistantPickerProps> = ({}) => {
                   }}
                   tabIndex={0}
                   className="hover:bg-accent focus:bg-accent flex cursor-pointer items-center rounded p-2 focus:outline-none"
-                  onClick={() =>
-                    callSelectAssistant(item as Tables<"assistants">)
-                  }
+                  onClick={() => callSelectAssistant(item)}
                   onKeyDown={getKeyDownHandler(index)}
                 >
-                  {item.image_path ? (
+                  {item.id.startsWith("asst_") ? (
+                    // OpenAI assistant - show different icon
+                    <div className="flex size-8 items-center justify-center rounded bg-blue-500">
+                      <IconRobotFace size={24} className="text-white" />
+                    </div>
+                  ) : item.image_path ? (
                     <Image
                       src={
                         assistantImages.find(

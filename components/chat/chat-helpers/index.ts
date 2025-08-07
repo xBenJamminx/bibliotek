@@ -146,6 +146,85 @@ export const createTempMessages = (
 
 // Ollama support removed - using only hosted models
 
+export const handleOpenaiAssistantChat = async (
+  messageContent: string,
+  assistantId: string,
+  threadId: string | null,
+  newAbortController: AbortController,
+  setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>,
+  setFirstTokenReceived: React.Dispatch<React.SetStateAction<boolean>>,
+  setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>,
+  setThreadId: React.Dispatch<React.SetStateAction<string | null>>
+) => {
+  try {
+    const response = await fetch("/api/send-message", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        threadId,
+        message: messageContent
+      }),
+      signal: newAbortController.signal
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error("No response body")
+    }
+
+    let fullContent = ""
+    setFirstTokenReceived(true)
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = new TextDecoder().decode(value)
+      const lines = chunk.split("\n")
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const data = JSON.parse(line.slice(6))
+
+            if (data.type === "content") {
+              fullContent += data.content
+
+              // Update the assistant message with streaming content
+              setChatMessages(prev => {
+                const newMessages = [...prev]
+                if (newMessages.length > 0) {
+                  const lastMessage = newMessages[newMessages.length - 1]
+                  if (lastMessage.message.role === "assistant") {
+                    lastMessage.message.content = fullContent
+                  }
+                }
+                return newMessages
+              })
+            } else if (data.type === "done") {
+              setThreadId(data.threadId)
+              return fullContent
+            }
+          } catch (error) {
+            console.error("Error parsing streaming data:", error)
+          }
+        }
+      }
+    }
+
+    return fullContent
+  } catch (error) {
+    console.error("Error in OpenAI assistant chat:", error)
+    throw error
+  }
+}
+
 export const handleAssistantChat = async (
   messageContent: string,
   threadId: string | null,

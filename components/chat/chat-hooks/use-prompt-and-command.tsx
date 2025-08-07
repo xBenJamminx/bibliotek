@@ -179,12 +179,51 @@ export const usePromptAndCommand = () => {
     if (allFiles.length > 0) setShowFilesDisplay(true)
   }
 
+  const handleSelectOpenaiAssistant = async (assistant: any) => {
+    setIsAssistantPickerOpen(false)
+    setUserInput(userInput.replace(/@[^ ]*$/, ""))
+
+    // Store the OpenAI assistant info
+    setSelectedAssistant({
+      id: assistant.id,
+      name: assistant.name,
+      description: assistant.description || "",
+      model: assistant.model,
+      prompt: assistant.instructions || "",
+      temperature: 0.5,
+      context_length: 4096,
+      include_profile_context: false,
+      include_workspace_instructions: false,
+      embeddings_provider: "openai",
+      image_path: "",
+      created_at: "",
+      updated_at: "",
+      user_id: "",
+      workspace_id: ""
+    } as Tables<"assistants">)
+
+    setChatSettings({
+      model: assistant.model as LLMID,
+      prompt: assistant.instructions || "You are a helpful AI assistant.",
+      temperature: 0.5,
+      contextLength: 4096,
+      includeProfileContext: false,
+      includeWorkspaceInstructions: false,
+      embeddingsProvider: "openai"
+    })
+
+    // For OpenAI assistants, we don't need local files since they use their own vector store
+    setChatFiles([])
+    setSelectedTools([])
+  }
+
   return {
     handleInputChange,
     handleSelectPrompt,
     handleSelectUserFile,
     handleSelectUserCollection,
     handleSelectTool,
-    handleSelectAssistant
+    handleSelectAssistant,
+    handleSelectOpenaiAssistant
   }
 }

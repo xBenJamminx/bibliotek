@@ -164,11 +164,12 @@ export async function buildFinalMessages(
   if (messageFileItems && messageFileItems.length > 0) {
     const retrievalText = buildRetrievalText(messageFileItems)
 
-    finalMessages[finalMessages.length - 1] = {
-      ...finalMessages[finalMessages.length - 1],
-      content: `${
-        finalMessages[finalMessages.length - 1].content
-      }\n\n${retrievalText}`
+    // Add retrieval text to the system message instead of the last user message
+    if (finalMessages.length > 0 && finalMessages[0].role === "system") {
+      finalMessages[0] = {
+        ...finalMessages[0],
+        content: `${finalMessages[0].content}\n\n${retrievalText}`
+      }
     }
   }
 
