@@ -221,33 +221,13 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             )}
 
             <div className="text-sm font-bold">
-              Talking to {selectedAssistant?.name || "OpenAI Assistant"}
+              Talking to {selectedAssistant?.name || "Biblio-Tek"}
             </div>
           </div>
         )}
       </div>
 
       <div className="border-input relative mt-3 flex min-h-[60px] w-full items-center justify-center rounded-xl border-2">
-        {/* Simple test button */}
-        <button
-          onClick={() => {
-            console.log("TEST: Sending test message")
-            handleSendMessage("Hello, this is a test message", [], false)
-          }}
-          style={{
-            position: "absolute",
-            top: "-40px",
-            right: "0",
-            background: "red",
-            color: "white",
-            padding: "5px 10px",
-            zIndex: 10000,
-            cursor: "pointer"
-          }}
-        >
-          TEST SEND
-        </button>
-
         <div className="absolute bottom-[76px] left-0 max-h-[300px] w-full overflow-auto rounded-xl dark:border-none">
           <ChatCommandInput />
         </div>

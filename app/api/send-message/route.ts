@@ -14,6 +14,13 @@ interface SendMessageResponse {
   threadId: string
 }
 
+interface StreamResponse {
+  type: "content" | "done"
+  content?: string
+  threadId?: string
+  timestamp?: string
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body: SendMessageRequest = await request.json()
@@ -80,11 +87,12 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    // Create and run the assistant
+    // Create and run the assistant with streaming
     const run = await openai.beta.threads.runs.create(
       currentThreadId,
       {
-        assistant_id: assistantId
+        assistant_id: assistantId,
+        stream: true
       },
       {
         headers: {
@@ -93,71 +101,122 @@ export async function POST(request: NextRequest) {
       }
     )
 
-    // Poll for completion
-    let runStatus = await openai.beta.threads.runs.retrieve(
-      currentThreadId,
-      run.id,
-      {
-        headers: {
-          "OpenAI-Beta": "assistants=v2"
+    // Create a streaming response
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          // Poll for completion with streaming
+          let runStatus = await openai.beta.threads.runs.retrieve(
+            currentThreadId,
+            run.id,
+            {
+              headers: {
+                "OpenAI-Beta": "assistants=v2"
+              }
+            }
+          )
+
+          // Keep checking until the run is completed
+          while (
+            runStatus.status === "queued" ||
+            runStatus.status === "in_progress"
+          ) {
+            console.log("Run status:", runStatus.status)
+            await new Promise(resolve => setTimeout(resolve, 500)) // Reduced to 500ms for faster response
+            runStatus = await openai.beta.threads.runs.retrieve(
+              currentThreadId,
+              run.id,
+              {
+                headers: {
+                  "OpenAI-Beta": "assistants=v2"
+                }
+              }
+            )
+          }
+
+          if (runStatus.status === "completed") {
+            // Get the assistant's response
+            const messages = await openai.beta.threads.messages.list(
+              currentThreadId,
+              {
+                headers: {
+                  "OpenAI-Beta": "assistants=v2"
+                }
+              }
+            )
+            const assistantMessage = messages.data.find(
+              msg => msg.role === "assistant" && msg.run_id === run.id
+            )
+
+            if (
+              assistantMessage &&
+              assistantMessage.content[0]?.type === "text"
+            ) {
+              const fullMessage = assistantMessage.content[0].text.value
+
+              // Stream the message in chunks
+              const chunkSize = 10
+              for (let i = 0; i < fullMessage.length; i += chunkSize) {
+                const chunk = fullMessage.slice(i, i + chunkSize)
+                const streamResponse: StreamResponse = {
+                  type: "content",
+                  content: chunk
+                }
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify(streamResponse)}\n\n`)
+                )
+                await new Promise(resolve => setTimeout(resolve, 50)) // Small delay for streaming effect
+              }
+
+              // Send completion signal
+              const finalResponse: StreamResponse = {
+                type: "done",
+                threadId: currentThreadId,
+                timestamp: new Date().toISOString()
+              }
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify(finalResponse)}\n\n`)
+              )
+            } else {
+              console.error("No assistant message found")
+              const errorResponse: StreamResponse = {
+                type: "done"
+              }
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify(errorResponse)}\n\n`)
+              )
+            }
+          } else {
+            console.error("Run failed with status:", runStatus.status)
+            const errorResponse: StreamResponse = {
+              type: "done"
+            }
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify(errorResponse)}\n\n`)
+            )
+          }
+        } catch (error) {
+          console.error("Error in streaming:", error)
+          const errorResponse: StreamResponse = {
+            type: "done"
+          }
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(errorResponse)}\n\n`)
+          )
+        } finally {
+          controller.close()
         }
       }
-    )
+    })
 
-    // Keep checking until the run is completed
-    while (
-      runStatus.status === "queued" ||
-      runStatus.status === "in_progress"
-    ) {
-      console.log("Run status:", runStatus.status)
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Wait 1 second
-      runStatus = await openai.beta.threads.runs.retrieve(
-        currentThreadId,
-        run.id,
-        {
-          headers: {
-            "OpenAI-Beta": "assistants=v2"
-          }
-        }
-      )
-    }
-
-    if (runStatus.status === "completed") {
-      // Get the assistant's response
-      const messages = await openai.beta.threads.messages.list(
-        currentThreadId,
-        {
-          headers: {
-            "OpenAI-Beta": "assistants=v2"
-          }
-        }
-      )
-      const assistantMessage = messages.data.find(
-        msg => msg.role === "assistant" && msg.run_id === run.id
-      )
-
-      if (assistantMessage && assistantMessage.content[0]?.type === "text") {
-        const response: SendMessageResponse = {
-          message: assistantMessage.content[0].text.value,
-          timestamp: new Date().toISOString(),
-          threadId: currentThreadId
-        }
-
-        return NextResponse.json(response)
-      } else {
-        console.error("No assistant message found")
-        return NextResponse.json(
-          { error: "No response from assistant" },
-          { status: 500 }
-        )
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive"
       }
-    } else {
-      console.error("Run failed with status:", runStatus.status)
-      return NextResponse.json(
-        { error: `Assistant run failed with status: ${runStatus.status}` },
-        { status: 500 }
-      )
-    }
+    })
   } catch (error: any) {
     console.error("Error in send-message API:", error)
     return NextResponse.json(

@@ -241,15 +241,7 @@ export const useChatHandler = () => {
         throw new Error(errorData.error || "Failed to send message")
       }
 
-      const data = await response.json()
-      console.log("Assistant response:", data)
-
-      // Update thread ID if it's a new thread
-      if (data.threadId && data.threadId !== threadId) {
-        setThreadId(data.threadId)
-      }
-
-      // Add the messages to the chat
+      // Add the user message immediately
       const currentTime = Date.now()
       const tempUserMessage: ChatMessage = {
         message: {
@@ -268,13 +260,14 @@ export const useChatHandler = () => {
         fileItems: []
       }
 
+      // Create initial assistant message
       const tempAssistantMessage: ChatMessage = {
         message: {
           id: `assistant-${currentTime}`,
           chat_id: currentChat?.id || "temp",
           assistant_id: null,
           user_id: profile?.user_id || "",
-          content: data.message,
+          content: "",
           model: "gpt-4-turbo-preview",
           role: "assistant",
           sequence_number: currentTime + 1,
@@ -285,7 +278,63 @@ export const useChatHandler = () => {
         fileItems: []
       }
 
+      // Add both messages to chat
       setChatMessages(prev => [...prev, tempUserMessage, tempAssistantMessage])
+
+      // Handle streaming response
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body")
+      }
+
+      let assistantContent = ""
+      let finalThreadId = threadId
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          const chunk = new TextDecoder().decode(value)
+          const lines = chunk.split("\n")
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6))
+
+                if (data.type === "content" && data.content) {
+                  assistantContent += data.content
+                  // Update the assistant message with accumulated content
+                  setChatMessages(prev =>
+                    prev.map(msg =>
+                      msg.message.id === `assistant-${currentTime}`
+                        ? {
+                            ...msg,
+                            message: {
+                              ...msg.message,
+                              content: assistantContent
+                            }
+                          }
+                        : msg
+                    )
+                  )
+                } else if (data.type === "done") {
+                  if (data.threadId) {
+                    finalThreadId = data.threadId
+                    setThreadId(data.threadId)
+                  }
+                  break
+                }
+              } catch (e) {
+                console.error("Error parsing stream data:", e)
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock()
+      }
 
       setIsGenerating(false)
     } catch (error) {

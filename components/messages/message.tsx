@@ -261,7 +261,7 @@ export const Message: FC<MessageProps> = ({
                       )?.name
                     : selectedAssistant
                       ? selectedAssistant?.name
-                      : MODEL_DATA?.modelName
+                      : "Biblio-Tek"
                   : profile?.display_name ?? profile?.username}
               </div>
             </div>
