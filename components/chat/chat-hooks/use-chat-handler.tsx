@@ -204,6 +204,24 @@ export const useChatHandler = () => {
       setUserInput("")
       setIsGenerating(true)
 
+      // Create a chat if one doesn't exist
+      let currentChat = selectedChat
+      if (!currentChat && profile && selectedWorkspace) {
+        console.log("Creating new chat...")
+        currentChat = await handleCreateChat(
+          chatSettings,
+          profile,
+          selectedWorkspace,
+          messageContent,
+          selectedAssistant,
+          [], // newMessageFiles
+          setSelectedChat,
+          setChats,
+          setChatFiles
+        )
+        console.log("Created chat:", currentChat.id)
+      }
+
       // Simple test - just call the assistant API directly
       console.log("Calling OpenAI Assistant API...")
 
@@ -236,7 +254,7 @@ export const useChatHandler = () => {
       const tempUserMessage: ChatMessage = {
         message: {
           id: `user-${currentTime}`,
-          chat_id: selectedChat?.id || "temp",
+          chat_id: currentChat?.id || "temp",
           assistant_id: null,
           user_id: profile?.user_id || "",
           content: messageContent,
@@ -253,7 +271,7 @@ export const useChatHandler = () => {
       const tempAssistantMessage: ChatMessage = {
         message: {
           id: `assistant-${currentTime}`,
-          chat_id: selectedChat?.id || "temp",
+          chat_id: currentChat?.id || "temp",
           assistant_id: null,
           user_id: profile?.user_id || "",
           content: data.message,
