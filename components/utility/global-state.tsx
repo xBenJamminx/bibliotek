@@ -9,7 +9,6 @@ import { getWorkspacesByUserId } from "@/db/workspaces"
 import { convertBlobToBase64 } from "@/lib/blob-to-b64"
 import {
   fetchHostedModels,
-  fetchOllamaModels,
   fetchOpenRouterModels
 } from "@/lib/models/fetch-models"
 import { supabase } from "@/lib/supabase/browser-client"
@@ -53,7 +52,6 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
   // MODELS STORE
   const [envKeyMap, setEnvKeyMap] = useState<Record<string, VALID_ENV_KEYS>>({})
   const [availableHostedModels, setAvailableHostedModels] = useState<LLM[]>([])
-  const [availableLocalModels, setAvailableLocalModels] = useState<LLM[]>([])
   const [availableOpenRouterModels, setAvailableOpenRouterModels] = useState<
     OpenRouterLLM[]
   >([])
@@ -77,7 +75,7 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
   const [userInput, setUserInput] = useState<string>("")
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [chatSettings, setChatSettings] = useState<ChatSettings>({
-    model: "gpt-4-turbo-preview",
+    model: "gpt-4o-mini",
     prompt: "You are a helpful AI assistant.",
     temperature: 0.5,
     contextLength: 4096,
@@ -155,11 +153,7 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
         }
       }
 
-      if (process.env.NEXT_PUBLIC_OLLAMA_URL) {
-        const localModels = await fetchOllamaModels()
-        if (!localModels) return
-        setAvailableLocalModels(localModels)
-      }
+      // Ollama support removed - using only hosted models
     })()
   }, [])
 
@@ -242,8 +236,6 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
         setEnvKeyMap,
         availableHostedModels,
         setAvailableHostedModels,
-        availableLocalModels,
-        setAvailableLocalModels,
         availableOpenRouterModels,
         setAvailableOpenRouterModels,
 

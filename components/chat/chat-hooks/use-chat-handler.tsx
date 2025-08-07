@@ -44,7 +44,7 @@ export const useChatHandler = () => {
     setSelectedChat,
     setChats,
     setSelectedTools,
-    availableLocalModels,
+    // availableLocalModels removed
     availableOpenRouterModels,
     abortController,
     setAbortController,

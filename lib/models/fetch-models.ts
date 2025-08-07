@@ -1,17 +1,20 @@
+import { LLM_LIST_MAP } from "./llm/llm-list"
 import { Tables } from "@/supabase/types"
 import { LLM, LLMID, OpenRouterLLM } from "@/types"
 import { toast } from "sonner"
-import { LLM_LIST_MAP } from "./llm/llm-list"
+import { isModelAllowed } from "./model-config"
 
 export const fetchHostedModels = async (profile: Tables<"profiles">) => {
   try {
-    const providers = ["google", "anthropic", "mistral", "groq", "perplexity"]
-
-    if (profile.use_azure_openai) {
-      providers.push("azure")
-    } else {
-      providers.push("openai")
-    }
+    const providers = [
+      "openai",
+      "anthropic",
+      "google",
+      "mistral",
+      "groq",
+      "perplexity",
+      "azure"
+    ]
 
     const response = await fetch("/api/keys")
 
@@ -38,7 +41,9 @@ export const fetchHostedModels = async (profile: Tables<"profiles">) => {
         const models = LLM_LIST_MAP[provider]
 
         if (Array.isArray(models)) {
-          modelsToAdd.push(...models)
+          // Filter models based on configuration
+          const filteredModels = models.filter(isModelAllowed)
+          modelsToAdd.push(...filteredModels)
         }
       }
     }
@@ -49,33 +54,6 @@ export const fetchHostedModels = async (profile: Tables<"profiles">) => {
     }
   } catch (error) {
     console.warn("Error fetching hosted models: " + error)
-  }
-}
-
-export const fetchOllamaModels = async () => {
-  try {
-    const response = await fetch(
-      process.env.NEXT_PUBLIC_OLLAMA_URL + "/api/tags"
-    )
-
-    if (!response.ok) {
-      throw new Error(`Ollama server is not responding.`)
-    }
-
-    const data = await response.json()
-
-    const localModels: LLM[] = data.models.map((model: any) => ({
-      modelId: model.name as LLMID,
-      modelName: model.name,
-      provider: "ollama",
-      hostedId: model.name,
-      platformLink: "https://ollama.ai/library",
-      imageInput: false
-    }))
-
-    return localModels
-  } catch (error) {
-    console.warn("Error fetching Ollama models: " + error)
   }
 }
 
@@ -105,7 +83,10 @@ export const fetchOpenRouterModels = async () => {
       })
     )
 
-    return openRouterModels
+    // Filter OpenRouter models based on configuration
+    const filteredOpenRouterModels = openRouterModels.filter(isModelAllowed)
+
+    return filteredOpenRouterModels
   } catch (error) {
     console.error("Error fetching Open Router models: " + error)
     toast.error("Error fetching Open Router models: " + error)

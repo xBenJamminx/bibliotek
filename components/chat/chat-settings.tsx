@@ -18,7 +18,7 @@ export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
     setChatSettings,
     models,
     availableHostedModels,
-    availableLocalModels,
+    // availableLocalModels removed
     availableOpenRouterModels
   } = useContext(ChatbotUIContext)
 
@@ -58,7 +58,7 @@ export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
       imageInput: false
     })),
     ...availableHostedModels,
-    ...availableLocalModels,
+    // availableLocalModels removed
     ...availableOpenRouterModels
   ]
 

@@ -22,20 +22,15 @@ export const ModelSelect: FC<ModelSelectProps> = ({
   selectedModelId,
   onSelectModel
 }) => {
-  const {
-    profile,
-    models,
-    availableHostedModels,
-    availableLocalModels,
-    availableOpenRouterModels
-  } = useContext(ChatbotUIContext)
+  const { profile, models, availableHostedModels, availableOpenRouterModels } =
+    useContext(ChatbotUIContext)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
   const [isOpen, setIsOpen] = useState(false)
   const [search, setSearch] = useState("")
-  const [tab, setTab] = useState<"hosted" | "local">("hosted")
+  const [tab, setTab] = useState<"hosted">("hosted")
 
   useEffect(() => {
     if (isOpen) {
@@ -60,7 +55,6 @@ export const ModelSelect: FC<ModelSelectProps> = ({
       imageInput: false
     })),
     ...availableHostedModels,
-    ...availableLocalModels,
     ...availableOpenRouterModels
   ]
 
@@ -97,7 +91,11 @@ export const ModelSelect: FC<ModelSelectProps> = ({
       >
         {allModels.length === 0 ? (
           <div className="rounded text-sm font-bold">
-            Unlock models by entering API keys in your profile settings.
+            {profile.openai_api_key ||
+            profile.anthropic_api_key ||
+            profile.google_gemini_api_key
+              ? "No models available with your current API keys. Add more API keys in settings."
+              : "Unlock models by entering API keys in your profile settings."}
           </div>
         ) : (
           <Button
@@ -132,15 +130,7 @@ export const ModelSelect: FC<ModelSelectProps> = ({
         style={{ width: triggerRef.current?.offsetWidth }}
         align="start"
       >
-        <Tabs value={tab} onValueChange={(value: any) => setTab(value)}>
-          {availableLocalModels.length > 0 && (
-            <TabsList defaultValue="hosted" className="grid grid-cols-2">
-              <TabsTrigger value="hosted">Hosted</TabsTrigger>
-
-              <TabsTrigger value="local">Local</TabsTrigger>
-            </TabsList>
-          )}
-        </Tabs>
+        {/* Local models removed - using only hosted models */}
 
         <Input
           ref={inputRef}
@@ -154,9 +144,7 @@ export const ModelSelect: FC<ModelSelectProps> = ({
           {Object.entries(groupedModels).map(([provider, models]) => {
             const filteredModels = models
               .filter(model => {
-                if (tab === "hosted") return model.provider !== "ollama"
-                if (tab === "local") return model.provider === "ollama"
-                if (tab === "openrouter") return model.provider === "openrouter"
+                return model.provider !== "ollama" // Remove ollama models
               })
               .filter(model =>
                 model.modelName.toLowerCase().includes(search.toLowerCase())

@@ -5,6 +5,5 @@ export type ModelProvider =
   | "mistral"
   | "groq"
   | "perplexity"
-  | "ollama"
   | "openrouter"
   | "custom"

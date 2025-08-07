@@ -2,7 +2,7 @@ import { LLM } from "@/types"
 
 const OPENAI_PLATORM_LINK = "https://platform.openai.com/docs/overview"
 
-// OpenAI Models (UPDATED 1/25/24) -----------------------------
+// OpenAI Models (UPDATED 2024) -----------------------------
 const GPT4o: LLM = {
   modelId: "gpt-4o",
   modelName: "GPT-4o",
@@ -18,7 +18,23 @@ const GPT4o: LLM = {
   }
 }
 
-// GPT-4 Turbo (UPDATED 1/25/24)
+// GPT-4o Mini (UPDATED 2024)
+const GPT4oMini: LLM = {
+  modelId: "gpt-4o-mini",
+  modelName: "GPT-4o Mini",
+  provider: "openai",
+  hostedId: "gpt-4o-mini",
+  platformLink: OPENAI_PLATORM_LINK,
+  imageInput: true,
+  pricing: {
+    currency: "USD",
+    unit: "1M tokens",
+    inputCost: 0.15,
+    outputCost: 0.6
+  }
+}
+
+// GPT-4 Turbo (UPDATED 2024)
 const GPT4Turbo: LLM = {
   modelId: "gpt-4-turbo-preview",
   modelName: "GPT-4 Turbo",
@@ -34,7 +50,7 @@ const GPT4Turbo: LLM = {
   }
 }
 
-// GPT-4 Vision (UPDATED 12/18/23)
+// GPT-4 Vision (UPDATED 2024)
 const GPT4Vision: LLM = {
   modelId: "gpt-4-vision-preview",
   modelName: "GPT-4 Vision",
@@ -49,7 +65,7 @@ const GPT4Vision: LLM = {
   }
 }
 
-// GPT-4 (UPDATED 1/29/24)
+// GPT-4 (UPDATED 2024)
 const GPT4: LLM = {
   modelId: "gpt-4",
   modelName: "GPT-4",
@@ -65,7 +81,7 @@ const GPT4: LLM = {
   }
 }
 
-// GPT-3.5 Turbo (UPDATED 1/25/24)
+// GPT-3.5 Turbo (UPDATED 2024)
 const GPT3_5Turbo: LLM = {
   modelId: "gpt-3.5-turbo",
   modelName: "GPT-3.5 Turbo",
@@ -83,6 +99,7 @@ const GPT3_5Turbo: LLM = {
 
 export const OPENAI_LLM_LIST: LLM[] = [
   GPT4o,
+  GPT4oMini,
   GPT4Turbo,
   GPT4Vision,
   GPT4,
