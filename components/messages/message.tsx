@@ -183,16 +183,22 @@ export const Message: FC<MessageProps> = ({
 
   return (
     <div
-      className={cn(
-        "animate-slide-in-up flex w-full justify-center",
-        message.role === "user" ? "" : "bg-secondary"
-      )}
+      className={cn("animate-slide-in-up flex w-full justify-center")}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onKeyDown={handleKeyDown}
     >
-      <div className="relative flex w-full flex-col p-6 sm:w-[550px] sm:px-0 md:w-[650px] lg:w-[650px] xl:w-[700px]">
-        <div className="absolute right-5 top-7 sm:right-0">
+      <div
+        className={cn(
+          "relative flex w-full flex-col p-4 sm:w-[550px] sm:px-0 md:w-[650px] lg:w-[650px] xl:w-[700px]"
+        )}
+      >
+        <div
+          className={cn(
+            "absolute top-5",
+            message.role === "user" ? "right-2 sm:right-0" : "left-2 sm:left-0"
+          )}
+        >
           <MessageActions
             onCopy={handleCopy}
             onEdit={handleStartEdit}
@@ -214,7 +220,12 @@ export const Message: FC<MessageProps> = ({
               <div className="text-lg font-semibold">Prompt</div>
             </div>
           ) : (
-            <div className="flex items-center space-x-3">
+            <div
+              className={cn(
+                "flex items-center space-x-3",
+                message.role === "user" && "flex-row-reverse space-x-reverse"
+              )}
+            >
               {message.role === "assistant" ? (
                 messageAssistantImage ? (
                   <Image
@@ -255,7 +266,12 @@ export const Message: FC<MessageProps> = ({
                 />
               )}
 
-              <div className="font-semibold">
+              <div
+                className={cn(
+                  "font-semibold",
+                  message.role === "user" && "text-right"
+                )}
+              >
                 {message.role === "assistant"
                   ? message.assistant_id
                     ? assistants.find(
@@ -307,18 +323,39 @@ export const Message: FC<MessageProps> = ({
             <ThinkingAnimation message="AI is thinking" />
           ) : (
             <>
-              <MessageMarkdown content={message.content} />
-              {!message.content && (
-                <div className="text-muted-foreground text-sm">
-                  No content available
+              <div
+                className={cn(
+                  "flex",
+                  message.role === "user" ? "justify-end" : "justify-start"
+                )}
+              >
+                <div
+                  className={cn(
+                    "inline-block max-w-[85%] rounded-2xl px-4 py-2",
+                    message.role === "user"
+                      ? "rounded-br-sm bg-blue-600 text-white"
+                      : "bg-secondary rounded-bl-sm"
+                  )}
+                >
+                  <MessageMarkdown content={message.content} />
+                  {!message.content && (
+                    <div className="text-muted-foreground text-sm">
+                      No content available
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </>
           )}
         </div>
 
         {/* Message timestamp */}
-        <div className="text-muted-foreground mt-2 text-xs">
+        <div
+          className={cn(
+            "text-muted-foreground mt-2 text-xs",
+            message.role === "user" ? "text-right" : "text-left"
+          )}
+        >
           {format(new Date(message.created_at), "MMM d, h:mm a")}
         </div>
 
