@@ -74,14 +74,6 @@ export const SidebarDataList: FC<SidebarDataListProps> = ({
           />
         )
 
-      case "assistants":
-        return (
-          <AssistantItem
-            key={item.id}
-            assistant={item as Tables<"assistants">}
-          />
-        )
-
       case "tools":
         return <ToolItem key={item.id} tool={item as Tables<"tools">} />
 

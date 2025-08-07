@@ -158,30 +158,39 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
     const chat = await getChatById(params.chatid as string)
     if (!chat) return
 
-    if (chat.assistant_id) {
-      const assistant = assistants.find(
-        assistant => assistant.id === chat.assistant_id
-      )
+    // Always use the configured OpenAI assistant
+    const defaultAssistant = {
+      id: process.env.ASSISTANT_ID || "asst_default",
+      name: "Particle Ink Assistant",
+      description: "Your AI assistant with file retrieval capabilities",
+      model: "gpt-4o-mini",
+      prompt:
+        "You are a helpful AI assistant with access to files and knowledge base.",
+      temperature: 0.5,
+      context_length: 4096,
+      include_profile_context: false,
+      include_workspace_instructions: false,
+      embeddings_provider: "openai",
+      image_path: "",
+      created_at: "",
+      updated_at: "",
+      user_id: "",
+      workspace_id: ""
+    } as Tables<"assistants">
 
-      if (assistant) {
-        setSelectedAssistant(assistant)
-
-        const assistantTools = (
-          await getAssistantToolsByAssistantId(assistant.id)
-        ).tools
-        setSelectedTools(assistantTools)
-      }
-    }
+    setSelectedAssistant(defaultAssistant)
+    setSelectedTools([]) // No tools needed for OpenAI assistant
 
     setSelectedChat(chat)
     setChatSettings({
-      model: chat.model as LLMID,
-      prompt: chat.prompt,
-      temperature: chat.temperature,
-      contextLength: chat.context_length,
-      includeProfileContext: chat.include_profile_context,
-      includeWorkspaceInstructions: chat.include_workspace_instructions,
-      embeddingsProvider: chat.embeddings_provider as "openai" | "local"
+      model: "gpt-4o-mini" as LLMID,
+      prompt:
+        "You are a helpful AI assistant with access to files and knowledge base.",
+      temperature: 0.5,
+      contextLength: 4096,
+      includeProfileContext: false,
+      includeWorkspaceInstructions: false,
+      embeddingsProvider: "openai"
     })
   }
 

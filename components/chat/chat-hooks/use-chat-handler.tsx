@@ -37,6 +37,7 @@ export const useChatHandler = () => {
     setUserInput,
     setNewMessageImages,
     profile,
+    isGenerating,
     setIsGenerating,
     setChatMessages,
     setFirstTokenReceived,
@@ -52,6 +53,7 @@ export const useChatHandler = () => {
     chatSettings,
     newMessageImages,
     selectedAssistant,
+    setSelectedAssistant,
     chatMessages,
     chatImages,
     setChatImages,
@@ -85,10 +87,10 @@ export const useChatHandler = () => {
     }
   }, [isPromptPickerOpen, isFilePickerOpen, isToolPickerOpen])
 
-  // Cleanup abort controller on unmount
+  // Cleanup abort controller on unmount - only abort if we're not currently generating
   useEffect(() => {
     return () => {
-      if (abortController && !abortController.signal.aborted) {
+      if (abortController && !abortController.signal.aborted && !isGenerating) {
         try {
           abortController.abort()
         } catch (error) {
@@ -96,7 +98,7 @@ export const useChatHandler = () => {
         }
       }
     }
-  }, [abortController])
+  }, [abortController, isGenerating])
 
   const handleNewChat = async () => {
     if (!selectedWorkspace) return
@@ -204,76 +206,28 @@ export const useChatHandler = () => {
       setUserInput("")
       setIsGenerating(true)
 
-      // Always use OpenAI assistant for this setup
-      const isOpenaiAssistant = true
-
-      // If no assistant is selected, create a default OpenAI assistant
-      if (!selectedAssistant) {
-        const defaultAssistant = {
-          id: process.env.ASSISTANT_ID || "asst_default",
-          name: "Particle Ink Assistant",
-          description: "Your AI assistant with file retrieval capabilities",
-          model: "gpt-4o-mini",
-          prompt:
-            "You are a helpful AI assistant with access to files and knowledge base.",
-          temperature: 0.5,
-          context_length: 4096,
-          include_profile_context: false,
-          include_workspace_instructions: false,
-          embeddings_provider: "openai",
-          image_path: "",
-          created_at: "",
-          updated_at: "",
-          user_id: "",
-          workspace_id: ""
-        } as Tables<"assistants">
-
-        setSelectedAssistant(defaultAssistant)
-
-        setChatSettings({
-          model: "gpt-4o-mini" as LLMID,
-          prompt:
-            "You are a helpful AI assistant with access to files and knowledge base.",
-          temperature: 0.5,
-          contextLength: 4096,
-          includeProfileContext: false,
-          includeWorkspaceInstructions: false,
-          embeddingsProvider: "openai"
-        })
+      // Clean up any existing abort controller
+      if (abortController && !abortController.signal.aborted) {
+        try {
+          abortController.abort()
+        } catch (error) {
+          console.error("Error cleaning up previous abort controller:", error)
+        }
       }
 
-      // Create a chat if one doesn't exist
-      let currentChat = selectedChat
-      if (!currentChat && profile && selectedWorkspace) {
-        console.log("Creating new chat...")
-        currentChat = await handleCreateChat(
-          chatSettings,
-          profile,
-          selectedWorkspace,
-          messageContent,
-          selectedAssistant,
-          [], // newMessageFiles
-          setSelectedChat,
-          setChats,
-          setChatFiles,
-          isOpenaiAssistant
-        )
-        console.log("Created chat:", currentChat.id)
-
-        // Set the selected chat so we can use it for message persistence
-        setSelectedChat(currentChat)
-      }
+      const newAbortController = new AbortController()
+      setAbortController(newAbortController)
 
       // Add the user message immediately
       const currentTime = Date.now()
       const tempUserMessage: ChatMessage = {
         message: {
           id: `user-${currentTime}`,
-          chat_id: currentChat?.id || "temp",
+          chat_id: "temp",
           assistant_id: null,
           user_id: profile?.user_id || "",
           content: messageContent,
-          model: chatSettings.model,
+          model: "gpt-4o-mini",
           role: "user",
           sequence_number: currentTime,
           image_paths: [],
@@ -287,11 +241,11 @@ export const useChatHandler = () => {
       const tempAssistantMessage: ChatMessage = {
         message: {
           id: `assistant-${currentTime}`,
-          chat_id: currentChat?.id || "temp",
+          chat_id: "temp",
           assistant_id: null,
           user_id: profile?.user_id || "",
           content: "Thinking...",
-          model: chatSettings.model,
+          model: "gpt-4o-mini",
           role: "assistant",
           sequence_number: currentTime + 1,
           image_paths: [],
@@ -304,128 +258,108 @@ export const useChatHandler = () => {
       // Add both messages to chat immediately
       setChatMessages(prev => [...prev, tempUserMessage, tempAssistantMessage])
 
-      // Use the existing chat helpers infrastructure
-      console.log("Using chat helpers...")
-
-      // Clean up any existing abort controller
-      if (abortController && !abortController.signal.aborted) {
-        try {
-          abortController.abort()
-        } catch (error) {
-          console.error("Error cleaning up previous abort controller:", error)
-        }
-      }
-
-      const newAbortController = new AbortController()
-      setAbortController(newAbortController)
-
-      // Handle retrieval if enabled and files are available (only for local assistants)
-      let retrievedFileItems: Tables<"file_items">[] = []
-      if (
-        !isOpenaiAssistant &&
-        useRetrieval &&
-        (chatFiles.length > 0 || newMessageFiles.length > 0)
-      ) {
-        try {
-          retrievedFileItems = await handleRetrieval(
-            messageContent,
-            newMessageFiles,
-            chatFiles,
-            chatSettings.embeddingsProvider,
-            sourceCount
-          )
-          console.log("Retrieved file items:", retrievedFileItems.length)
-        } catch (error) {
-          console.error("Error during retrieval:", error)
-        }
-      }
-
-      const payload = {
-        chatSettings,
-        chatMessages,
-        messageContent,
-        selectedAssistant,
-        selectedTools,
-        chatImages,
-        // Don't include files for OpenAI assistants - they use their own vector store
-        newMessageFiles: isOpenaiAssistant ? [] : newMessageFiles,
-        messageFileItems: isOpenaiAssistant ? [] : retrievedFileItems,
-        chatFileItems: isOpenaiAssistant ? [] : chatFileItems,
-        isRegeneration
-      }
-
-      const modelData = LLM_LIST.find(llm => llm.modelId === chatSettings.model)
-      if (!modelData) {
-        throw new Error("Model not found")
-      }
-
+      // Make direct API call to OpenAI
       try {
-        let finalAssistantContent: string
-        if (isOpenaiAssistant) {
-          // Use OpenAI Assistants API
-          finalAssistantContent = await handleOpenaiAssistantChat(
-            messageContent,
-            selectedAssistant.id,
-            threadId,
-            newAbortController,
-            setIsGenerating,
-            setFirstTokenReceived,
-            setChatMessages,
-            setThreadId
-          )
-        } else {
-          // Use regular chat completion
-          finalAssistantContent = await handleHostedChat(
-            payload,
-            profile!,
-            modelData,
-            tempAssistantMessage,
-            isRegeneration,
-            newAbortController,
-            [], // newMessageImages
-            chatImages,
-            setIsGenerating,
-            setFirstTokenReceived,
-            setChatMessages,
-            setToolInUse
-          )
+        // Check if the request was aborted before making the call
+        if (newAbortController.signal.aborted) {
+          return
         }
 
-        console.log("Chat completed successfully:", finalAssistantContent)
+        console.log("Making API request to /api/chat/openai")
+        const response = await fetch("/api/chat/openai", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: "You are a helpful AI assistant." },
+              ...chatMessages.map(msg => ({
+                role: msg.message.role,
+                content: msg.message.content
+              })),
+              { role: "user", content: messageContent }
+            ],
+            model: "gpt-4o-mini",
+            temperature: 0.5,
+            assistantId: process.env.ASSISTANT_ID,
+            stream: true
+          }),
+          signal: newAbortController.signal
+        })
 
-        // Persist messages to database after streaming is complete
-        if (currentChat && profile && finalAssistantContent) {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const reader = response.body?.getReader()
+        if (!reader) {
+          throw new Error("No response body")
+        }
+
+        let fullContent = ""
+        setFirstTokenReceived(true)
+
+        while (true) {
           try {
-            await handleCreateMessages(
-              chatMessages,
-              currentChat,
-              profile,
-              modelData,
-              messageContent,
-              finalAssistantContent,
-              [], // newMessageImages
-              isRegeneration,
-              [], // retrievedFileItems
-              setChatMessages,
-              setChatFileItems,
-              setChatImages,
-              selectedAssistant
-            )
-            console.log("Messages persisted to database successfully")
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = new TextDecoder().decode(value)
+            const lines = chunk.split("\n")
+
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6))
+
+                  if (data.type === "content") {
+                    fullContent += data.content
+
+                    // Update the assistant message with streaming content
+                    setChatMessages(prev => {
+                      const newMessages = [...prev]
+                      if (newMessages.length > 0) {
+                        const lastMessage = newMessages[newMessages.length - 1]
+                        if (lastMessage.message.role === "assistant") {
+                          lastMessage.message.content = fullContent
+                        }
+                      }
+                      return newMessages
+                    })
+                  } else if (data.type === "done") {
+                    console.log("Chat completed successfully:", fullContent)
+                    setIsGenerating(false)
+                    setFirstTokenReceived(false)
+                    return
+                  }
+                } catch (error) {
+                  console.error("Error parsing streaming data:", error)
+                }
+              }
+            }
           } catch (error) {
-            console.error("Error persisting messages:", error)
-            toast.error("Failed to save messages to database")
+            if (error.name === "AbortError") {
+              console.log("Request was aborted")
+              return
+            }
+            throw error
           }
         }
+
+        setIsGenerating(false)
+        setFirstTokenReceived(false)
       } catch (error) {
         console.error("Error in chat:", error)
         setIsGenerating(false)
         setFirstTokenReceived(false)
 
-        // Remove the temporary messages on error
-        setChatMessages(prev => prev.slice(0, -2))
-
-        toast.error("Failed to send message. Please try again.")
+        // Only remove messages if it's not an abort error
+        if (error.name !== "AbortError") {
+          // Remove the temporary messages on error
+          setChatMessages(prev => prev.slice(0, -2))
+          toast.error("Failed to send message. Please try again.")
+        }
       }
     } catch (error) {
       console.error("Error in handleSendMessage:", error)

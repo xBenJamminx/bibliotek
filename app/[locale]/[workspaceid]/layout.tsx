@@ -95,54 +95,10 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
     const workspace = await getWorkspaceById(workspaceId)
     setSelectedWorkspace(workspace)
 
-    const assistantData = await getAssistantWorkspacesByWorkspaceId(workspaceId)
-    setAssistants(assistantData.assistants)
-
-    // Load OpenAI assistants
-    try {
-      const openaiAssistantsResponse = await fetch("/api/assistants/openai")
-      if (openaiAssistantsResponse.ok) {
-        const { assistants: openaiAssistants } =
-          await openaiAssistantsResponse.json()
-        setOpenaiAssistants(openaiAssistants)
-      }
-    } catch (error) {
-      console.error("Error loading OpenAI assistants:", error)
-    }
-
-    for (const assistant of assistantData.assistants) {
-      let url = ""
-
-      if (assistant.image_path) {
-        url = (await getAssistantImageFromStorage(assistant.image_path)) || ""
-      }
-
-      if (url) {
-        const response = await fetch(url)
-        const blob = await response.blob()
-        const base64 = await convertBlobToBase64(blob)
-
-        setAssistantImages(prev => [
-          ...prev,
-          {
-            assistantId: assistant.id,
-            path: assistant.image_path,
-            base64,
-            url
-          }
-        ])
-      } else {
-        setAssistantImages(prev => [
-          ...prev,
-          {
-            assistantId: assistant.id,
-            path: assistant.image_path,
-            base64: "",
-            url
-          }
-        ])
-      }
-    }
+    // Assistant loading disabled - using fixed OpenAI assistant
+    setAssistants([])
+    setOpenaiAssistants([])
+    setAssistantImages([])
 
     const chats = await getChatsByWorkspaceId(workspaceId)
     setChats(chats)
