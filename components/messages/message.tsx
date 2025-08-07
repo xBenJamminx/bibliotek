@@ -322,15 +322,15 @@ export const Message: FC<MessageProps> = ({
           {format(new Date(message.created_at), "MMM d, h:mm a")}
         </div>
 
-        {fileItems.length > 0 && (
+        {fileItems && fileItems.length > 0 && (
           <div className="border-primary mt-6 border-t pt-4 font-bold">
             {!viewSources ? (
               <div
                 className="flex cursor-pointer items-center text-lg hover:opacity-50"
                 onClick={() => setViewSources(true)}
               >
-                {fileItems.length}
-                {fileItems.length > 1 ? " Sources " : " Source "}
+                {fileItems?.length || 0}
+                {(fileItems?.length || 0) > 1 ? " Sources " : " Source "}
                 from {Object.keys(fileSummary).length}{" "}
                 {Object.keys(fileSummary).length > 1 ? "Files" : "File"}{" "}
                 <IconCaretRightFilled className="ml-1" />
@@ -341,8 +341,8 @@ export const Message: FC<MessageProps> = ({
                   className="flex cursor-pointer items-center text-lg hover:opacity-50"
                   onClick={() => setViewSources(false)}
                 >
-                  {fileItems.length}
-                  {fileItems.length > 1 ? " Sources " : " Source "}
+                  {fileItems?.length || 0}
+                  {(fileItems?.length || 0) > 1 ? " Sources " : " Source "}
                   from {Object.keys(fileSummary).length}{" "}
                   {Object.keys(fileSummary).length > 1 ? "Files" : "File"}{" "}
                   <IconCaretDownFilled className="ml-1" />
@@ -359,7 +359,7 @@ export const Message: FC<MessageProps> = ({
                         <div className="truncate">{file.name}</div>
                       </div>
 
-                      {fileItems
+                      {(fileItems || [])
                         .filter(fileItem => {
                           const parentFile = files.find(
                             parentFile => parentFile.id === fileItem.file_id

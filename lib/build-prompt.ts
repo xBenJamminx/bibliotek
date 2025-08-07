@@ -66,9 +66,9 @@ export async function buildFinalMessages(
       return chatMessage
     }
 
-    const nextChatMessageFileItems = nextChatMessage.fileItems
+    const nextChatMessageFileItems = nextChatMessage.fileItems || []
 
-    if (nextChatMessageFileItems.length > 0) {
+    if (nextChatMessageFileItems && nextChatMessageFileItems.length > 0) {
       const findFileItems = nextChatMessageFileItems
         .map(fileItemId =>
           chatFileItems.find(chatFileItem => chatFileItem.id === fileItemId)
@@ -161,7 +161,7 @@ export async function buildFinalMessages(
     }
   })
 
-  if (messageFileItems.length > 0) {
+  if (messageFileItems && messageFileItems.length > 0) {
     const retrievalText = buildRetrievalText(messageFileItems)
 
     finalMessages[finalMessages.length - 1] = {
