@@ -13,6 +13,7 @@ import { useContext, useEffect, useRef } from "react"
 import { LLM_LIST } from "../../../lib/models/llm/llm-list"
 import {
   createTempMessages,
+  handleAssistantChat,
   handleCreateChat,
   handleCreateMessages,
   handleHostedChat,
@@ -66,7 +67,9 @@ export const useChatHandler = () => {
     models,
     isPromptPickerOpen,
     isFilePickerOpen,
-    isToolPickerOpen
+    isToolPickerOpen,
+    threadId,
+    setThreadId
   } = useContext(ChatbotUIContext)
 
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
@@ -84,6 +87,7 @@ export const useChatHandler = () => {
     setChatMessages([])
     setSelectedChat(null)
     setChatFileItems([])
+    setThreadId(null) // Reset thread ID for new chat
 
     setIsGenerating(false)
     setFirstTokenReceived(false)
@@ -307,7 +311,21 @@ export const useChatHandler = () => {
           setToolInUse
         )
       } else {
-        if (modelData!.provider === "ollama") {
+        // Check if we have a selected assistant and should use the Assistants API
+        if (selectedAssistant && modelData!.provider === "openai") {
+          generatedText = await handleAssistantChat(
+            messageContent,
+            threadId,
+            tempAssistantChatMessage,
+            isRegeneration,
+            newAbortController,
+            setIsGenerating,
+            setFirstTokenReceived,
+            setChatMessages,
+            setToolInUse,
+            setThreadId
+          )
+        } else if (modelData!.provider === "ollama") {
           generatedText = await handleLocalChat(
             payload,
             profile!,
@@ -412,7 +430,6 @@ export const useChatHandler = () => {
 
   return {
     chatInputRef,
-    prompt,
     handleNewChat,
     handleSendMessage,
     handleFocusChatInput,

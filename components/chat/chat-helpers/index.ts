@@ -187,6 +187,74 @@ export const handleLocalChat = async (
   )
 }
 
+export const handleAssistantChat = async (
+  messageContent: string,
+  threadId: string | null,
+  tempAssistantChatMessage: ChatMessage,
+  isRegeneration: boolean,
+  newAbortController: AbortController,
+  setIsGenerating: React.Dispatch<React.SetStateAction<boolean>>,
+  setFirstTokenReceived: React.Dispatch<React.SetStateAction<boolean>>,
+  setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>,
+  setToolInUse: React.Dispatch<React.SetStateAction<string>>,
+  setThreadId: React.Dispatch<React.SetStateAction<string | null>>
+) => {
+  try {
+    setFirstTokenReceived(true)
+    setToolInUse("none")
+
+    const response = await fetch("/api/send-message", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        threadId: threadId,
+        message: messageContent
+      }),
+      signal: newAbortController.signal
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || "Failed to send message")
+    }
+
+    const data = await response.json()
+
+    // Update the thread ID if it's a new thread
+    if (data.threadId && data.threadId !== threadId) {
+      setThreadId(data.threadId)
+    }
+
+    const assistantMessage = data.message
+
+    // Update the chat messages with the assistant's response
+    setChatMessages(prev =>
+      prev.map(chatMessage => {
+        if (chatMessage.message.id === tempAssistantChatMessage.message.id) {
+          const updatedChatMessage: ChatMessage = {
+            message: {
+              ...chatMessage.message,
+              content: assistantMessage
+            },
+            fileItems: chatMessage.fileItems
+          }
+          return updatedChatMessage
+        }
+        return chatMessage
+      })
+    )
+
+    return assistantMessage
+  } catch (error: any) {
+    console.error("Error in handleAssistantChat:", error)
+    setIsGenerating(false)
+    setChatMessages(prevMessages => prevMessages.slice(0, -2))
+    throw error
+  }
+}
+
 export const handleHostedChat = async (
   payload: ChatPayload,
   profile: Tables<"profiles">,
@@ -208,9 +276,12 @@ export const handleHostedChat = async (
 
   let draftMessages = await buildFinalMessages(payload, profile, chatImages)
 
-  let formattedMessages : any[] = []
+  let formattedMessages: any[] = []
   if (provider === "google") {
-    formattedMessages = await adaptMessagesForGoogleGemini(payload, draftMessages)
+    formattedMessages = await adaptMessagesForGoogleGemini(
+      payload,
+      draftMessages
+    )
   } else {
     formattedMessages = draftMessages
   }
