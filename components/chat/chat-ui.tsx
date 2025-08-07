@@ -161,7 +161,7 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
     // Always use the configured OpenAI assistant
     const defaultAssistant = {
       id: process.env.ASSISTANT_ID || "asst_default",
-      name: "Particle Ink Assistant",
+      name: "Biblio-Tek",
       description: "Your AI assistant with file retrieval capabilities",
       model: "gpt-4o-mini",
       prompt:
