@@ -1,4 +1,4 @@
-import { generateLocalEmbedding } from "@/lib/generate-local-embedding"
+import { generateEmbedding } from "@/lib/generate-local-embedding"
 import { processDocX } from "@/lib/retrieval/processing"
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { Database } from "@/supabase/types"
@@ -24,12 +24,10 @@ export async function POST(req: Request) {
 
     const profile = await getServerProfile()
 
-    if (embeddingsProvider === "openai") {
-      if (profile.use_azure_openai) {
-        checkApiKey(profile.azure_openai_api_key, "Azure OpenAI")
-      } else {
-        checkApiKey(profile.openai_api_key, "OpenAI")
-      }
+    if (profile.use_azure_openai) {
+      checkApiKey(profile.azure_openai_api_key, "Azure OpenAI")
+    } else {
+      checkApiKey(profile.openai_api_key, "OpenAI")
     }
 
     let chunks: FileItemChunk[] = []
@@ -43,8 +41,6 @@ export async function POST(req: Request) {
           status: 400
         })
     }
-
-    let embeddings: any = []
 
     let openai
     if (profile.use_azure_openai) {
@@ -60,28 +56,10 @@ export async function POST(req: Request) {
         organization: profile.openai_organization_id
       })
     }
-
-    if (embeddingsProvider === "openai") {
-      const response = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: chunks.map(chunk => chunk.content)
-      })
-
-      embeddings = response.data.map((item: any) => {
-        return item.embedding
-      })
-    } else if (embeddingsProvider === "local") {
-      const embeddingPromises = chunks.map(async chunk => {
-        try {
-          return await generateLocalEmbedding(chunk.content)
-        } catch (error) {
-          console.error(`Error generating embedding for chunk: ${chunk}`, error)
-          return null
-        }
-      })
-
-      embeddings = await Promise.all(embeddingPromises)
-    }
+    const embeddings = await generateEmbedding(
+      openai,
+      chunks.map(chunk => chunk.content)
+    )
 
     const file_items = chunks.map((chunk, index) => ({
       file_id: fileId,

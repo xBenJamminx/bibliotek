@@ -1,17 +1,22 @@
-import { pipeline } from "@xenova/transformers"
+import OpenAI from "openai"
 
-export async function generateLocalEmbedding(content: string) {
-  const generateEmbedding = await pipeline(
-    "feature-extraction",
-    "Xenova/all-MiniLM-L6-v2"
-  )
+/**
+ * Generate embeddings for one or many inputs using a web/API-based provider.
+ * @param openai - An initialized OpenAI client instance.
+ * @param input - Text or array of texts to embed.
+ * @returns The embedding vector(s) returned by the provider.
+ */
+export async function generateEmbedding(
+  openai: OpenAI,
+  input: string | string[]
+): Promise<number[] | number[][]> {
+  const inputs = Array.isArray(input) ? input : [input]
 
-  const output = await generateEmbedding(content, {
-    pooling: "mean",
-    normalize: true
+  const response = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: inputs
   })
 
-  const embedding = Array.from(output.data)
-
-  return embedding
+  const embeddings = response.data.map(item => item.embedding as number[])
+  return Array.isArray(input) ? embeddings : embeddings[0]
 }

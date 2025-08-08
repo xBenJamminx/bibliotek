@@ -1,4 +1,4 @@
-import { generateLocalEmbedding } from "@/lib/generate-local-embedding"
+import { generateEmbedding } from "@/lib/generate-local-embedding"
 import {
   processCSV,
   processJSON,
@@ -58,19 +58,17 @@ export async function POST(req: Request) {
     const blob = new Blob([fileBuffer])
     const fileExtension = fileMetadata.name.split(".").pop()?.toLowerCase()
 
-    if (embeddingsProvider === "openai") {
-      try {
-        if (profile.use_azure_openai) {
-          checkApiKey(profile.azure_openai_api_key, "Azure OpenAI")
-        } else {
-          checkApiKey(profile.openai_api_key, "OpenAI")
-        }
-      } catch (error: any) {
-        error.message =
-          error.message +
-          ", make sure it is configured or else use local embeddings"
-        throw error
+    try {
+      if (profile.use_azure_openai) {
+        checkApiKey(profile.azure_openai_api_key, "Azure OpenAI")
+      } else {
+        checkApiKey(profile.openai_api_key, "OpenAI")
       }
+    } catch (error: any) {
+      error.message =
+        error.message +
+        ", make sure it is configured before generating embeddings"
+      throw error
     }
 
     let chunks: FileItemChunk[] = []
@@ -97,8 +95,6 @@ export async function POST(req: Request) {
         })
     }
 
-    let embeddings: any = []
-
     let openai
     if (profile.use_azure_openai) {
       openai = new OpenAI({
@@ -113,29 +109,10 @@ export async function POST(req: Request) {
         organization: profile.openai_organization_id
       })
     }
-
-    if (embeddingsProvider === "openai") {
-      const response = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: chunks.map(chunk => chunk.content)
-      })
-
-      embeddings = response.data.map((item: any) => {
-        return item.embedding
-      })
-    } else if (embeddingsProvider === "local") {
-      const embeddingPromises = chunks.map(async chunk => {
-        try {
-          return await generateLocalEmbedding(chunk.content)
-        } catch (error) {
-          console.error(`Error generating embedding for chunk: ${chunk}`, error)
-
-          return null
-        }
-      })
-
-      embeddings = await Promise.all(embeddingPromises)
-    }
+    const embeddings = await generateEmbedding(
+      openai,
+      chunks.map(chunk => chunk.content)
+    )
 
     const file_items = chunks.map((chunk, index) => ({
       file_id,
