@@ -1,6 +1,7 @@
 import { ChatbotUIContext } from "@/context/context"
 import { FC, useContext } from "react"
 import { Button } from "../ui/button"
+import { useChatHandler } from "./chat-hooks/use-chat-handler"
 
 interface QuickReplyButtonsProps {}
 
@@ -13,8 +14,8 @@ const QUICK_REPLIES = [
 ]
 
 export const QuickReplyButtons: FC<QuickReplyButtonsProps> = ({}) => {
-  const { handleSendMessage, chatMessages, userInput, setUserInput } =
-    useContext(ChatbotUIContext)
+  const { chatMessages, userInput, setUserInput } = useContext(ChatbotUIContext)
+  const { handleSendMessage } = useChatHandler()
 
   const handleQuickReply = (reply: string) => {
     setUserInput(reply)
