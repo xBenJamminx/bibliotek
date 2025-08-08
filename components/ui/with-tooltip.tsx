@@ -1,4 +1,4 @@
-import { FC, forwardRef } from "react"
+import { FC } from "react"
 import {
   Tooltip,
   TooltipContent,
@@ -14,29 +14,18 @@ interface WithTooltipProps {
   side?: "left" | "right" | "top" | "bottom"
 }
 
-export const WithTooltip = forwardRef<HTMLDivElement, WithTooltipProps>(
-  (
-    {
-      display,
-      trigger,
-
-      delayDuration = 500,
-      side = "right"
-    },
-    ref
-  ) => {
-    return (
-      <TooltipProvider delayDuration={delayDuration}>
-        <Tooltip>
-          <TooltipTrigger asChild ref={ref}>
-            {trigger}
-          </TooltipTrigger>
-
-          <TooltipContent side={side}>{display}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    )
-  }
-)
-
-WithTooltip.displayName = "WithTooltip"
+export const WithTooltip: FC<WithTooltipProps> = ({
+  display,
+  trigger,
+  delayDuration = 500,
+  side = "right"
+}) => {
+  return (
+    <TooltipProvider delayDuration={delayDuration}>
+      <Tooltip>
+        <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+        <TooltipContent side={side}>{display}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}

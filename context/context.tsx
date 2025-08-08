@@ -204,6 +204,8 @@ export const ChatbotUIContext = createContext<ChatbotUIContext>({
   setChatSettings: () => {},
   chatFileItems: [],
   setChatFileItems: () => {},
+  threadId: null,
+  setThreadId: () => {},
 
   // ACTIVE CHAT STORE
   isGenerating: false,
