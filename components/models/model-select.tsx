@@ -143,9 +143,6 @@ export const ModelSelect: FC<ModelSelectProps> = ({
         <div className="max-h-[300px] overflow-auto">
           {Object.entries(groupedModels).map(([provider, models]) => {
             const filteredModels = models
-              .filter(model => {
-                return model.provider !== "ollama" // Remove ollama models
-              })
               .filter(model =>
                 model.modelName.toLowerCase().includes(search.toLowerCase())
               )
