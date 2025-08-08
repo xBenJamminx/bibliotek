@@ -3,7 +3,8 @@ const withBundleAnalyzer = require("@next/bundle-analyzer")({
 })
 
 const withPWA = require("next-pwa")({
-  dest: "public"
+  dest: "public",
+  disable: process.env.NODE_ENV === "production"
 })
 
 module.exports = withBundleAnalyzer(
@@ -26,10 +27,9 @@ module.exports = withBundleAnalyzer(
       ]
     },
     experimental: {
-      serverComponentsExternalPackages: ["sharp", "onnxruntime-node"]
+      serverComponentsExternalPackages: ["sharp"]
     },
     env: {
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       ASSISTANT_ID: process.env.ASSISTANT_ID
     }
   })
