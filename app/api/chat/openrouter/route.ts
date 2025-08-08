@@ -1,6 +1,5 @@
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { ChatSettings } from "@/types"
-import { OpenAIStream, StreamingTextResponse } from "ai"
 import { ServerRuntime } from "next"
 import OpenAI from "openai"
 import { ChatCompletionCreateParamsBase } from "openai/resources/chat/completions.mjs"
@@ -24,7 +23,7 @@ export async function POST(request: Request) {
       baseURL: "https://openrouter.ai/api/v1"
     })
 
-    const response = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: chatSettings.model as ChatCompletionCreateParamsBase["model"],
       messages: messages as ChatCompletionCreateParamsBase["messages"],
       temperature: chatSettings.temperature,
@@ -32,9 +31,36 @@ export async function POST(request: Request) {
       stream: true
     })
 
-    const stream = OpenAIStream(response)
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const send = (obj: unknown) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
+        }
+        const finish = () => {
+          send({ type: "done" })
+          controller.close()
+        }
+        try {
+          for await (const chunk of completion) {
+            const token = (chunk as any)?.choices?.[0]?.delta?.content || ""
+            if (token) send({ type: "content", content: token })
+          }
+          finish()
+        } catch (err: any) {
+          send({ type: "error", error: String(err?.message || err) })
+          controller.close()
+        }
+      }
+    })
 
-    return new StreamingTextResponse(stream)
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive"
+      }
+    })
   } catch (error: any) {
     let errorMessage = error.message || "An unexpected error occurred"
     const errorCode = error.status || 500

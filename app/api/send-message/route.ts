@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       apiKey: apiKey
     })
 
-    let currentThreadId = threadId
+    let currentThreadId: string | undefined = threadId
 
     // Create a new thread if none provided
     if (!currentThreadId) {
@@ -77,8 +77,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Add the user message to the thread
+    const threadIdForApi = currentThreadId as string
+
     await openai.beta.threads.messages.create(
-      currentThreadId,
+      threadIdForApi,
       {
         role: "user",
         content: message
@@ -92,10 +94,9 @@ export async function POST(request: NextRequest) {
 
     // Create and run the assistant with streaming
     const run = await openai.beta.threads.runs.create(
-      currentThreadId,
+      threadIdForApi,
       {
-        assistant_id: assistantId,
-        stream: true
+        assistant_id: assistantId
       },
       {
         headers: {
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
         try {
           // Poll for completion with streaming
           let runStatus = await openai.beta.threads.runs.retrieve(
-            currentThreadId,
+            threadIdForApi,
             run.id,
             {
               headers: {
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
             console.log("Run status:", runStatus.status)
             await new Promise(resolve => setTimeout(resolve, 500)) // Reduced to 500ms for faster response
             runStatus = await openai.beta.threads.runs.retrieve(
-              currentThreadId,
+              threadIdForApi,
               run.id,
               {
                 headers: {
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
           if (runStatus.status === "completed") {
             // Get the assistant's response
             const messages = await openai.beta.threads.messages.list(
-              currentThreadId,
+              threadIdForApi,
               {
                 headers: {
                   "OpenAI-Beta": "assistants=v2"
@@ -177,7 +178,7 @@ export async function POST(request: NextRequest) {
               // Send completion signal
               const finalResponse: StreamResponse = {
                 type: "done",
-                threadId: currentThreadId,
+                threadId: threadIdForApi,
                 timestamp: new Date().toISOString()
               }
               controller.enqueue(

@@ -192,9 +192,10 @@ export const usePromptAndCommand = () => {
       embeddings_provider: "openai",
       image_path: "",
       created_at: "",
-      updated_at: "",
+      updated_at: null,
       user_id: "",
-      workspace_id: ""
+      folder_id: null,
+      sharing: ""
     } as Tables<"assistants">)
 
     setChatSettings({

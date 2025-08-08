@@ -1,7 +1,6 @@
 import { CHAT_SETTING_LIMITS } from "@/lib/chat-setting-limits"
 import { checkApiKey, getServerProfile } from "@/lib/server/server-chat-helpers"
 import { ChatSettings } from "@/types"
-import { OpenAIStream, StreamingTextResponse } from "ai"
 import OpenAI from "openai"
 
 export const runtime = "edge"
@@ -24,7 +23,7 @@ export async function POST(request: Request) {
       baseURL: "https://api.mistral.ai/v1"
     })
 
-    const response = await mistral.chat.completions.create({
+    const completion = await mistral.chat.completions.create({
       model: chatSettings.model,
       messages,
       max_tokens:
@@ -32,11 +31,36 @@ export async function POST(request: Request) {
       stream: true
     })
 
-    // Convert the response into a friendly text-stream.
-    const stream = OpenAIStream(response)
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const send = (obj: unknown) => {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
+        }
+        const finish = () => {
+          send({ type: "done" })
+          controller.close()
+        }
+        try {
+          for await (const chunk of completion) {
+            const token = (chunk as any)?.choices?.[0]?.delta?.content || ""
+            if (token) send({ type: "content", content: token })
+          }
+          finish()
+        } catch (err: any) {
+          send({ type: "error", error: String(err?.message || err) })
+          controller.close()
+        }
+      }
+    })
 
-    // Respond with the stream
-    return new StreamingTextResponse(stream)
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive"
+      }
+    })
   } catch (error: any) {
     let errorMessage = error.message || "An unexpected error occurred"
     const errorCode = error.status || 500

@@ -10,6 +10,7 @@ import { getMessageImageFromStorage } from "@/db/storage/message-images"
 import { convertBlobToBase64 } from "@/lib/blob-to-b64"
 import useHotkey from "@/lib/hooks/use-hotkey"
 import { LLMID, MessageImage } from "@/types"
+import { Tables } from "@/supabase/types"
 import { useParams } from "next/navigation"
 import { FC, useContext, useEffect, useState } from "react"
 import { ChatHelp } from "./chat-help"
@@ -126,12 +127,14 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
       const chatFiles = await getChatFilesByChatId(params.chatid as string)
 
       setChatFiles(
-        chatFiles.files.map(file => ({
-          id: file.id,
-          name: file.name,
-          type: file.type,
-          file: null
-        }))
+        chatFiles.files
+          .filter((file): file is NonNullable<typeof file> => Boolean(file))
+          .map(file => ({
+            id: file.id,
+            name: file.name,
+            type: file.type,
+            file: null
+          }))
       )
 
       setUseRetrieval(true)
@@ -173,9 +176,10 @@ export const ChatUI: FC<ChatUIProps> = ({}) => {
       embeddings_provider: "openai",
       image_path: "",
       created_at: "",
-      updated_at: "",
+      updated_at: null,
       user_id: "",
-      workspace_id: ""
+      folder_id: null,
+      sharing: ""
     } as Tables<"assistants">
 
     setSelectedAssistant(defaultAssistant)

@@ -20,7 +20,6 @@ import {
   handleCreateChat,
   handleCreateMessages,
   handleHostedChat,
-  handleLocalChat,
   handleOpenaiAssistantChat,
   handleRetrieval,
   processResponse,
