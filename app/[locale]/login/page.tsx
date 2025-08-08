@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/ui/submit-button"
 import { createClient } from "@/lib/supabase/server"
+import { validateSupabaseEnv } from "@/lib/envs"
 import { Database } from "@/supabase/types"
 import { createServerClient } from "@supabase/ssr"
 import { get } from "@vercel/edge-config"
@@ -14,23 +15,30 @@ export const metadata: Metadata = {
   title: "Login"
 }
 
+validateSupabaseEnv()
+
 export default async function Login({
   searchParams
 }: {
   searchParams: { message: string }
 }) {
   const cookieStore = cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    )
+  }
+
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value
       }
     }
-  )
+  })
   const session = (await supabase.auth.getSession()).data.session
 
   if (session) {

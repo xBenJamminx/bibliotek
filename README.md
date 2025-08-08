@@ -165,13 +165,16 @@ This prevents issues with storage files not being deleted properly.
 To use the chat functionality, you need to configure at least one API key. The default model is GPT-4o-mini, which requires an OpenAI API key.
 
 You can add API keys in two ways:
+
 1. **Environment variables** (recommended for production)
 2. **User settings** (in the application interface)
 
 Required for default setup:
+
 - `OPENAI_API_KEY` - Required for GPT-4o-mini and other OpenAI models
 
 Optional configuration:
+
 - `NEXT_PUBLIC_RESTRICT_MODELS=true` - Restricts available models to only those you have configured (default: false)
 
 ### 6. Run app locally
@@ -279,6 +282,8 @@ In environment variables, add the following from the values you got above:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_OLLAMA_URL` (removed - no longer using local models)
+
+The `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` variables are **required** and must match the values from your Supabase project settings. Vercel deployments without these values will not function.
 
 You can also add API keys as environment variables.
 

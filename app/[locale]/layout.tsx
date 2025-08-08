@@ -3,6 +3,7 @@ import { GlobalState } from "@/components/utility/global-state"
 import { Providers } from "@/components/utility/providers"
 import TranslationsProvider from "@/components/utility/translations-provider"
 import initTranslations from "@/lib/i18n"
+import { validateSupabaseEnv } from "@/lib/envs"
 import { Database } from "@/supabase/types"
 import { createServerClient } from "@supabase/ssr"
 import { Metadata, Viewport } from "next"
@@ -66,22 +67,29 @@ export const viewport: Viewport = {
 
 const i18nNamespaces = ["translation"]
 
+validateSupabaseEnv()
+
 export default async function RootLayout({
   children,
   params: { locale }
 }: RootLayoutProps) {
   const cookieStore = cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    )
+  }
+
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value
       }
     }
-  )
+  })
   const session = (await supabase.auth.getSession()).data.session
 
   const { t, resources } = await initTranslations(locale, i18nNamespaces)
