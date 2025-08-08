@@ -165,13 +165,17 @@ This prevents issues with storage files not being deleted properly.
 To use the chat functionality, you need to configure at least one API key. The default model is GPT-4o-mini, which requires an OpenAI API key.
 
 You can add API keys in two ways:
+
 1. **Environment variables** (recommended for production)
 2. **User settings** (in the application interface)
 
 Required for default setup:
-- `OPENAI_API_KEY` - Required for GPT-4o-mini and other OpenAI models
+
+- `OPENAI_API_KEY` - Required for GPT-4o-mini and other OpenAI models.  
+  Configure this key as a server-side environment variable (for example, in Vercel's project settings).
 
 Optional configuration:
+
 - `NEXT_PUBLIC_RESTRICT_MODELS=true` - Restricts available models to only those you have configured (default: false)
 
 ### 6. Run app locally
@@ -280,7 +284,7 @@ In environment variables, add the following from the values you got above:
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_OLLAMA_URL` (removed - no longer using local models)
 
-You can also add API keys as environment variables.
+Add API keys as **server-side** environment variables in Vercel (Project Settings → Environment Variables).
 
 - `OPENAI_API_KEY`
 - `AZURE_OPENAI_API_KEY`

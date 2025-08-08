@@ -29,7 +29,6 @@ module.exports = withBundleAnalyzer(
       serverComponentsExternalPackages: ["sharp", "onnxruntime-node"]
     },
     env: {
-      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
       ASSISTANT_ID: process.env.ASSISTANT_ID
     }
   })
