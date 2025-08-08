@@ -30,6 +30,13 @@ export async function POST(request: NextRequest) {
 
     const encoder = new TextEncoder()
 
+    // Always use Assistants. Resolve ID with env-first strategy and a final static fallback.
+    const resolvedAssistantId: string =
+      assistantIdFromEnv ||
+      assistantId ||
+      process.env.NEXT_PUBLIC_ASSISTANT_ID ||
+      "asst_default"
+
     // Helper: fetch all file names from a vector store (paginates)
     const fetchAllVectorStoreFileNames = async (
       vsId: string
@@ -95,190 +102,105 @@ export async function POST(request: NextRequest) {
         }
 
         try {
-          const resolvedAssistantId = assistantId || assistantIdFromEnv
+          // Assistants v2 streaming path (always used)
+          const thread = await openai.beta.threads.create()
 
-          if (resolvedAssistantId) {
-            // Assistants v2 streaming path
-            const thread = await openai.beta.threads.create()
+          // Append only the latest user turn (fallback if not present)
+          const lastUser =
+            messages && messages.length
+              ? messages[messages.length - 1]?.content ?? ""
+              : ""
 
-            // Append only the latest user turn (fallback if not present)
-            const lastUser =
-              messages && messages.length
-                ? messages[messages.length - 1]?.content ?? ""
-                : ""
-
-            if (lastUser) {
-              await openai.beta.threads.messages.create(thread.id, {
-                role: "user",
-                content: lastUser
-              })
-            }
-
-            // Optionally augment thread with Supabase workspace retrieval (no local upload required)
-            try {
-              if (workspaceId && lastUser) {
-                const { data: fw } = await supabaseAdmin
-                  .from("file_workspaces")
-                  .select("file_id")
-                  .eq("workspace_id", workspaceId)
-
-                const fileIds: string[] = (fw || []).map((r: any) => r.file_id)
-                if (fileIds.length > 0) {
-                  const queryEmbedding = await generateEmbedding(
-                    openai as any,
-                    lastUser
-                  )
-                  const { data: matches } = await supabaseAdmin.rpc(
-                    "match_file_items_openai",
-                    {
-                      query_embedding: queryEmbedding as unknown as any,
-                      match_count: 4,
-                      file_ids: fileIds
-                    }
-                  )
-
-                  if (matches && matches.length > 0) {
-                    const retrievalText =
-                      "You may use the following sources if needed to answer the user's question. If you don't know the answer, say \"I don't know.\"\n\n" +
-                      matches
-                        .map(
-                          (m: any) =>
-                            `\n<BEGIN SOURCE>\n${m.content}\n</END SOURCE>`
-                        )
-                        .join("\n\n")
-
-                    await openai.beta.threads.messages.create(thread.id, {
-                      role: "user",
-                      content: retrievalText
-                    })
-                  }
-                }
-              }
-            } catch {
-              // Non-fatal: continue without retrieval augmentation
-            }
-
-            // Build run params and gather filenames
-            const runParams: any = { assistant_id: resolvedAssistantId }
-
-            let vectorNames: string[] = []
-            if (vectorStoreId) {
-              runParams.tools = [{ type: "file_search" }]
-              runParams.tool_resources = {
-                file_search: { vector_store_ids: [vectorStoreId] }
-              }
-              try {
-                vectorNames = await fetchAllVectorStoreFileNames(vectorStoreId)
-              } catch {}
-            }
-
-            const dbNames = await fetchWorkspaceDbFileNames(workspaceId)
-            const allNames = Array.from(
-              new Set([...(vectorNames || []), ...(dbNames || [])])
-            )
-            if (allNames.length > 0) {
-              runParams.instructions = `You have access to a file search tool and app-managed files. Total files available: ${allNames.length}. File names: ${allNames.join(", ")}. When asked about available files, enumerate these exactly; when asked to exclude certain files, ensure the remainder also reflect this full set.`
-            }
-
-            const assistantStream = await openai.beta.threads.runs.stream(
-              thread.id,
-              runParams
-            )
-
-            assistantStream.on("textDelta", delta => {
-              const content = (delta as any).value ?? ""
-              if (content) send({ type: "content", content })
+          if (lastUser) {
+            await openai.beta.threads.messages.create(thread.id, {
+              role: "user",
+              content: lastUser
             })
-
-            assistantStream.on("end", () => finish())
-            assistantStream.on("error", (err: any) => {
-              send({ type: "error", error: String(err?.message || err) })
-              controller.close()
-            })
-
-            await assistantStream.finalRun()
-          } else {
-            // Chat Completions fallback streaming with optional workspace retrieval
-            let enhancedMessages = messages || []
-
-            try {
-              const lastUser =
-                enhancedMessages && enhancedMessages.length
-                  ? enhancedMessages[enhancedMessages.length - 1]?.content ?? ""
-                  : ""
-
-              if (workspaceId && lastUser) {
-                // Fetch file IDs for the workspace
-                const { data: fw } = await supabaseAdmin
-                  .from("file_workspaces")
-                  .select("file_id")
-                  .eq("workspace_id", workspaceId)
-
-                const fileIds: string[] = (fw || []).map((r: any) => r.file_id)
-
-                if (fileIds.length > 0) {
-                  const queryEmbedding = await generateEmbedding(
-                    openai as any,
-                    lastUser
-                  )
-                  const { data: matches } = await supabaseAdmin.rpc(
-                    "match_file_items_openai",
-                    {
-                      query_embedding: queryEmbedding as unknown as any,
-                      match_count: 4,
-                      file_ids: fileIds
-                    }
-                  )
-
-                  if (matches && matches.length > 0) {
-                    const retrievalText =
-                      "You may use the following sources if needed to answer the user's question. If you don't know the answer, say \"I don't know.\"\n\n" +
-                      matches
-                        .map(
-                          (m: any) => `
-<BEGIN SOURCE>
-${m.content}
-</END SOURCE>`
-                        )
-                        .join("\n\n")
-
-                    // Append retrieval to the last user message
-                    const lastIdx = enhancedMessages.length - 1
-                    if (
-                      lastIdx >= 0 &&
-                      enhancedMessages[lastIdx]?.role === "user"
-                    ) {
-                      enhancedMessages[lastIdx] = {
-                        ...enhancedMessages[lastIdx],
-                        content: `${lastUser}\n\n${retrievalText}`
-                      }
-                    } else {
-                      enhancedMessages.push({
-                        role: "system",
-                        content: retrievalText
-                      })
-                    }
-                  }
-                }
-              }
-            } catch {
-              // Non-fatal: continue without retrieval
-            }
-
-            const completion = await openai.chat.completions.create({
-              model: model || "gpt-4o-mini",
-              messages: enhancedMessages,
-              temperature: temperature ?? 0.5,
-              stream: true
-            })
-
-            for await (const chunk of completion) {
-              const token = chunk.choices?.[0]?.delta?.content || ""
-              if (token) send({ type: "content", content: token })
-            }
-
-            finish()
           }
+
+          // Optionally augment thread with Supabase workspace retrieval (no local upload required)
+          try {
+            if (workspaceId && lastUser) {
+              const { data: fw } = await supabaseAdmin
+                .from("file_workspaces")
+                .select("file_id")
+                .eq("workspace_id", workspaceId)
+
+              const fileIds: string[] = (fw || []).map((r: any) => r.file_id)
+              if (fileIds.length > 0) {
+                const queryEmbedding = await generateEmbedding(
+                  openai as any,
+                  lastUser
+                )
+                const { data: matches } = await supabaseAdmin.rpc(
+                  "match_file_items_openai",
+                  {
+                    query_embedding: queryEmbedding as unknown as any,
+                    match_count: 4,
+                    file_ids: fileIds
+                  }
+                )
+
+                if (matches && matches.length > 0) {
+                  const retrievalText =
+                    "You may use the following sources if needed to answer the user's question. If you don't know the answer, say \"I don't know.\"\n\n" +
+                    matches
+                      .map(
+                        (m: any) =>
+                          `\n<BEGIN SOURCE>\n${m.content}\n</END SOURCE>`
+                      )
+                      .join("\n\n")
+
+                  await openai.beta.threads.messages.create(thread.id, {
+                    role: "user",
+                    content: retrievalText
+                  })
+                }
+              }
+            }
+          } catch {
+            // Non-fatal: continue without retrieval augmentation
+          }
+
+          // Build run params and gather filenames
+          const runParams: any = { assistant_id: resolvedAssistantId }
+
+          let vectorNames: string[] = []
+          if (vectorStoreId) {
+            runParams.tools = [{ type: "file_search" }]
+            runParams.tool_resources = {
+              file_search: { vector_store_ids: [vectorStoreId] }
+            }
+            try {
+              vectorNames = await fetchAllVectorStoreFileNames(vectorStoreId)
+            } catch {}
+          }
+
+          const dbNames = await fetchWorkspaceDbFileNames(workspaceId)
+          const allNames = Array.from(
+            new Set([...(vectorNames || []), ...(dbNames || [])])
+          )
+          if (allNames.length > 0) {
+            runParams.instructions = `You have access to a file search tool and app-managed files. Total files available: ${allNames.length}. File names: ${allNames.join(", ")}. When asked about available files, enumerate these exactly; when asked to exclude certain files, ensure the remainder also reflect this full set.`
+          }
+
+          const assistantStream = await openai.beta.threads.runs.stream(
+            thread.id,
+            runParams
+          )
+
+          assistantStream.on("textDelta", delta => {
+            const content = (delta as any).value ?? ""
+            if (content) send({ type: "content", content })
+          })
+
+          assistantStream.on("end", () => finish())
+          assistantStream.on("error", (err: any) => {
+            send({ type: "error", error: String(err?.message || err) })
+            controller.close()
+          })
+
+          await assistantStream.finalRun()
         } catch (err: any) {
           send({ type: "error", error: String(err?.message || err) })
           controller.close()
