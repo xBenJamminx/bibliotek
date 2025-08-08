@@ -171,7 +171,8 @@ You can add API keys in two ways:
 
 Required for default setup:
 
-- `OPENAI_API_KEY` - Required for GPT-4o-mini and other OpenAI models
+- `OPENAI_API_KEY` - Required for GPT-4o-mini and other OpenAI models.  
+  Configure this key as a server-side environment variable (for example, in Vercel's project settings).
 
 Optional configuration:
 
@@ -285,7 +286,7 @@ In environment variables, add the following from the values you got above:
 
 The `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` variables are **required** and must match the values from your Supabase project settings. Vercel deployments without these values will not function.
 
-You can also add API keys as environment variables.
+Add API keys as **server-side** environment variables in Vercel (Project Settings → Environment Variables).
 
 - `OPENAI_API_KEY`
 - `AZURE_OPENAI_API_KEY`
