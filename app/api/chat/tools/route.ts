@@ -25,7 +25,14 @@ export async function POST(request: Request) {
 
     let allTools: OpenAI.Chat.Completions.ChatCompletionTool[] = []
     let allRouteMaps = {}
-    let schemaDetails = []
+    let schemaDetails: Array<{
+      title: string
+      description: string
+      url: string
+      headers: any
+      routeMap: Record<string, string>
+      requestInBodyMap: Record<string, boolean>
+    }> = []
 
     for (const selectedTool of selectedTools) {
       try {
@@ -45,13 +52,21 @@ export async function POST(request: Request) {
 
         allRouteMaps = { ...allRouteMaps, ...routeMap }
 
+        const requestInBodyMap = convertedSchema.routes.reduce(
+          (map: Record<string, boolean>, route) => {
+            map[route.operationId] = !!route.requestInBody
+            return map
+          },
+          {}
+        )
+
         schemaDetails.push({
           title: convertedSchema.info.title,
           description: convertedSchema.info.description,
           url: convertedSchema.info.server,
           headers: selectedTool.custom_headers,
           routeMap,
-          requestInBody: convertedSchema.routes[0].requestInBody
+          requestInBodyMap
         })
       } catch (error: any) {
         console.error("Error converting schema", error)
@@ -101,7 +116,9 @@ export async function POST(request: Request) {
         }
 
         const path = pathTemplate.replace(/:(\w+)/g, (_, paramName) => {
-          const value = parsedArgs.parameters[paramName]
+          const value =
+            (parsedArgs?.parameters && parsedArgs.parameters[paramName]) ??
+            parsedArgs?.[paramName]
           if (!value) {
             throw new Error(
               `Parameter ${paramName} not found for function ${functionName}`
@@ -115,7 +132,7 @@ export async function POST(request: Request) {
         }
 
         // Determine if the request should be in the body or as a query
-        const isRequestInBody = schemaDetail.requestInBody
+        const isRequestInBody = !!schemaDetail.requestInBodyMap[functionName]
         let data = {}
 
         if (isRequestInBody) {
@@ -160,8 +177,20 @@ export async function POST(request: Request) {
           }
         } else {
           // If the type is set to query
+          const argsContainer =
+            (parsedArgs && typeof parsedArgs.parameters === "object"
+              ? parsedArgs.parameters
+              : parsedArgs) || {}
+
+          const normalizedQueryObject: Record<string, string> = {}
+          for (const [key, value] of Object.entries(argsContainer)) {
+            if (value !== undefined && value !== null) {
+              normalizedQueryObject[key] = String(value as any)
+            }
+          }
+
           const queryParams = new URLSearchParams(
-            parsedArgs.parameters
+            normalizedQueryObject
           ).toString()
           const fullUrl =
             schemaDetail.url + path + (queryParams ? "?" + queryParams : "")
