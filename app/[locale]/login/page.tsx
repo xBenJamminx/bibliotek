@@ -130,12 +130,17 @@ export default async function Login({
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
 
+    const siteUrl =
+      (await getEnvVarOrEdgeConfigValue("NEXT_PUBLIC_SITE_URL")) ||
+      headers().get("origin") ||
+      undefined
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        // USE IF YOU WANT TO SEND EMAIL VERIFICATION, ALSO CHANGE TOML FILE
-        // emailRedirectTo: `${origin}/auth/callback`
+        // Ensure verification links point to the deployed domain when confirmations are enabled
+        ...(siteUrl ? { emailRedirectTo: `${siteUrl}/auth/callback` } : {})
       }
     })
 
@@ -153,13 +158,16 @@ export default async function Login({
   const handleResetPassword = async (formData: FormData) => {
     "use server"
 
-    const origin = headers().get("origin")
+    const siteUrl =
+      (await getEnvVarOrEdgeConfigValue("NEXT_PUBLIC_SITE_URL")) ||
+      headers().get("origin") ||
+      undefined
     const email = formData.get("email") as string
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/auth/callback?next=/login/password`
+      redirectTo: `${siteUrl}/auth/callback?next=/login/password`
     })
 
     if (error) {
