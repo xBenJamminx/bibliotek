@@ -130,6 +130,26 @@ export default async function Login({
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
 
+    // Block duplicate signups early by checking email existence
+    try {
+      const { data: existsResult, error: existsError } = await supabase.rpc(
+        "email_exists",
+        { p_email: email }
+      )
+
+      if (existsError) {
+        console.error("email_exists rpc failed", existsError)
+        return redirect(`/login?message=Unable to validate email right now`)
+      }
+
+      if (existsResult) {
+        return redirect(`/login?message=Email already exists. Please sign in.`)
+      }
+    } catch (e) {
+      console.error(e)
+      return redirect(`/login?message=Unable to validate email right now`)
+    }
+
     const siteUrl =
       (await getEnvVarOrEdgeConfigValue("NEXT_PUBLIC_SITE_URL")) ||
       headers().get("origin") ||
