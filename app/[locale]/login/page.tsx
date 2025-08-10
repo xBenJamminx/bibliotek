@@ -104,6 +104,7 @@ export default async function Login({
   const signUp = async (formData: FormData) => {
     "use server"
 
+    const name = formData.get("name") as string
     const email = formData.get("email") as string
     const password = formData.get("password") as string
 
@@ -159,7 +160,7 @@ export default async function Login({
       headers().get("origin") ||
       undefined
 
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -172,6 +173,18 @@ export default async function Login({
       console.error(error)
       return redirect(`/login?message=${error.message}`)
     }
+
+    // Update profile.display_name to captured name (best-effort)
+    try {
+      const session = (await supabase.auth.getSession()).data.session
+      const userId = session?.user?.id || signUpData?.user?.id
+      if (userId && name) {
+        await supabase
+          .from("profiles")
+          .update({ display_name: name })
+          .eq("user_id", userId)
+      }
+    } catch {}
 
     // Go straight to home chat after sign up; middleware will redirect if at root
     const session = (await supabase.auth.getSession()).data.session
