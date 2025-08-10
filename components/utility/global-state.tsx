@@ -166,9 +166,7 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
       const profile = await getProfileByUserId(user.id)
       setProfile(profile)
 
-      if (!profile.has_onboarded) {
-        return router.push("/setup")
-      }
+      // Skip onboarding: proceed directly
 
       const workspaces = await getWorkspacesByUserId(user.id)
       setWorkspaces(workspaces)

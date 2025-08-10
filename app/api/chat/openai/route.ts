@@ -8,6 +8,13 @@ import { generateEmbedding } from "@/lib/generate-local-embedding"
 
 export async function POST(request: NextRequest) {
   try {
+    // Require auth for sending chat requests
+    const supabase = createClient(cookies())
+    const session = (await supabase.auth.getSession()).data.session
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { messages, model, temperature, assistantId, workspaceId } =
       await request.json()
 

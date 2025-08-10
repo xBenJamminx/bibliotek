@@ -58,7 +58,8 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
     selectedTools,
     setSelectedTools,
     assistantImages,
-    setUserInput
+    setUserInput,
+    profile
   } = useContext(ChatbotUIContext)
 
   const {
@@ -91,6 +92,10 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
     console.log("userInput state:", userInput)
 
     if (!isTyping && event.key === "Enter" && !event.shiftKey) {
+      if (!profile) {
+        toast.error("Please sign in to send messages.")
+        return
+      }
       console.log(
         "Enter key condition met, preventing default and sending message"
       )
@@ -294,6 +299,10 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
                 !userInput && "cursor-not-allowed opacity-50"
               )}
               onClick={() => {
+                if (!profile) {
+                  toast.error("Please sign in to send messages.")
+                  return
+                }
                 console.log("Send button clicked")
                 console.log("userInput:", userInput)
                 console.log("chatMessages:", chatMessages)

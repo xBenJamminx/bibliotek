@@ -1,31 +1,38 @@
-"use client"
+"use server"
 
-import { IconArrowRight } from "@tabler/icons-react"
-import Link from "next/link"
+import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
+import { Database } from "@/supabase/types"
 
-export default function HomePage() {
-  return (
-    <div className="flex size-full flex-col items-center justify-center">
-      <div>
-        <img
-          src="/particle.png"
-          alt="Particle Ink Logo"
-          width={120}
-          height={80}
-          className="object-contain"
-          style={{ maxWidth: "120px", maxHeight: "80px" }}
-        />
-      </div>
-
-      <div className="mt-2 text-4xl font-bold">Particle Ink Chatbot</div>
-
-      <Link
-        className="mt-4 flex w-[200px] items-center justify-center rounded-md bg-blue-500 p-2 font-semibold"
-        href="/login"
-      >
-        Start Chatting
-        <IconArrowRight className="ml-1" size={20} />
-      </Link>
-    </div>
+export default async function HomePage() {
+  const cookieStore = cookies()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        }
+      }
+    }
   )
+
+  const session = (await supabase.auth.getSession()).data.session
+
+  if (session) {
+    const { data: homeWorkspace } = await supabase
+      .from("workspaces")
+      .select("id,is_home")
+      .eq("user_id", session.user.id)
+      .eq("is_home", true)
+      .single()
+
+    if (homeWorkspace) {
+      return redirect(`/${homeWorkspace.id}/chat`)
+    }
+  }
+
+  return redirect("/login")
 }

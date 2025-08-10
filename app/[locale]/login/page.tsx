@@ -1,4 +1,5 @@
 import { Brand } from "@/components/ui/brand"
+import { AuthTabs } from "@/components/ui/auth-tabs"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SubmitButton } from "@/components/ui/submit-button"
@@ -89,6 +90,8 @@ export default async function Login({
     return redirect(`/${homeWorkspace.id}/chat`)
   }
 
+  // SSO disabled — email-only login
+
   const getEnvVarOrEdgeConfigValue = async (name: string) => {
     "use server"
     if (process.env.EDGE_CONFIG) {
@@ -151,7 +154,8 @@ export default async function Login({
     }
 
     const siteUrl =
-      (await getEnvVarOrEdgeConfigValue("NEXT_PUBLIC_SITE_URL")) ||
+      process.env.NEXT_PUBLIC_SUPABASE_SITE_URL ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
       headers().get("origin") ||
       undefined
 
@@ -169,7 +173,18 @@ export default async function Login({
       return redirect(`/login?message=${error.message}`)
     }
 
-    return redirect("/setup")
+    // Go straight to home chat after sign up; middleware will redirect if at root
+    const session = (await supabase.auth.getSession()).data.session
+    if (session) {
+      const { data: homeWorkspace } = await supabase
+        .from("workspaces")
+        .select("id,is_home")
+        .eq("user_id", session.user.id)
+        .eq("is_home", true)
+        .single()
+      if (homeWorkspace) return redirect(`/${homeWorkspace.id}/chat`)
+    }
+    return redirect("/login")
 
     // USE IF YOU WANT TO SEND EMAIL VERIFICATION, ALSO CHANGE TOML FILE
     // return redirect("/login?message=Check email to continue sign in process")
@@ -198,60 +213,90 @@ export default async function Login({
   }
 
   return (
-    <div className="flex w-full flex-1 flex-col justify-center gap-2 px-8 sm:max-w-md">
-      <form
-        className="animate-in text-foreground flex w-full flex-1 flex-col justify-center gap-2"
-        action={signIn}
-      >
+    <div className="flex w-full flex-1 flex-col items-center justify-center px-8">
+      <div className="mb-6">
         <Brand />
+      </div>
 
-        <Label className="text-md mt-4" htmlFor="email">
-          Email
-        </Label>
-        <Input
-          className="mb-3 rounded-md border bg-inherit px-4 py-2"
-          name="email"
-          placeholder="you@example.com"
-          required
-        />
+      <AuthTabs
+        signInForm={
+          <form className="flex flex-col gap-3" action={signIn}>
+            <Label className="text-md" htmlFor="email">
+              Email
+            </Label>
+            <Input
+              className="rounded-md border bg-inherit px-4 py-2"
+              name="email"
+              placeholder="you@example.com"
+              required
+            />
+            <Label className="text-md" htmlFor="password">
+              Password
+            </Label>
+            <Input
+              className="rounded-md border bg-inherit px-4 py-2"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+            />
+            <SubmitButton className="mt-2 rounded-md bg-blue-700 px-4 py-2 text-white">
+              Sign In
+            </SubmitButton>
+            <div className="text-muted-foreground mt-1 flex justify-center text-sm">
+              <span className="mr-1">Forgot your password?</span>
+              <button
+                formAction={handleResetPassword}
+                className="text-primary ml-1 underline hover:opacity-80"
+              >
+                Reset
+              </button>
+            </div>
+          </form>
+        }
+        signUpForm={
+          <form className="flex flex-col gap-3" action={signUp}>
+            <Label className="text-md" htmlFor="name">
+              Name
+            </Label>
+            <Input
+              className="rounded-md border bg-inherit px-4 py-2"
+              name="name"
+              type="text"
+              placeholder="Jane Doe"
+              required
+            />
+            <Label className="text-md" htmlFor="email">
+              Email
+            </Label>
+            <Input
+              className="rounded-md border bg-inherit px-4 py-2"
+              name="email"
+              type="email"
+              placeholder="you@example.com"
+              required
+            />
+            <Label className="text-md" htmlFor="password">
+              Password
+            </Label>
+            <Input
+              className="rounded-md border bg-inherit px-4 py-2"
+              type="password"
+              name="password"
+              placeholder="Minimum 8 characters"
+              required
+            />
+            <SubmitButton className="mt-2 rounded-md bg-blue-700 px-4 py-2 text-white">
+              Create account
+            </SubmitButton>
+          </form>
+        }
+      />
 
-        <Label className="text-md" htmlFor="password">
-          Password
-        </Label>
-        <Input
-          className="mb-6 rounded-md border bg-inherit px-4 py-2"
-          type="password"
-          name="password"
-          placeholder="••••••••"
-        />
-
-        <SubmitButton className="mb-2 rounded-md bg-blue-700 px-4 py-2 text-white">
-          Login
-        </SubmitButton>
-
-        <SubmitButton
-          formAction={signUp}
-          className="border-foreground/20 mb-2 rounded-md border px-4 py-2"
-        >
-          Sign Up
-        </SubmitButton>
-
-        <div className="text-muted-foreground mt-1 flex justify-center text-sm">
-          <span className="mr-1">Forgot your password?</span>
-          <button
-            formAction={handleResetPassword}
-            className="text-primary ml-1 underline hover:opacity-80"
-          >
-            Reset
-          </button>
-        </div>
-
-        {searchParams?.message && (
-          <p className="bg-foreground/10 text-foreground mt-4 p-4 text-center">
-            {searchParams.message}
-          </p>
-        )}
-      </form>
+      {searchParams?.message && (
+        <p className="bg-foreground/10 text-foreground mt-4 w-full max-w-md p-4 text-center">
+          {searchParams.message}
+        </p>
+      )}
     </div>
   )
 }
