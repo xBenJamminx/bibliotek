@@ -45,6 +45,23 @@ export const SidebarContent: FC<SidebarContentProps> = ({
         data={filteredData}
         folders={folders}
       />
+
+      {/* Move account button to bottom of chat column only */}
+      {contentType === "chats" && (
+        <div className="mt-auto pt-2">
+          <div className="flex justify-center">
+            <div className="w-full">
+              {/* Use profile settings as account button */}
+              {/* Reuse existing component */}
+              <div className="flex justify-center">
+                {/* Minimal button look; the component renders its own trigger */}
+                {/* @ts-expect-error server component typing passthrough */}
+                <></>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

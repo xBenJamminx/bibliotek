@@ -5,7 +5,7 @@ import { CHAT_SETTING_LIMITS } from "@/lib/chat-setting-limits"
 import { ChatSettings } from "@/types"
 import { IconInfoCircle } from "@tabler/icons-react"
 import { FC, useContext } from "react"
-import { ModelSelect } from "../models/model-select"
+// Model select removed
 import { AdvancedSettings } from "./advanced-settings"
 import { Checkbox } from "./checkbox"
 import { Label } from "./label"
@@ -39,16 +39,7 @@ export const ChatSettingsForm: FC<ChatSettingsFormProps> = ({
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1">
-        <Label>Model</Label>
-
-        <ModelSelect
-          selectedModelId={chatSettings.model}
-          onSelectModel={model => {
-            onChangeChatSettings({ ...chatSettings, model })
-          }}
-        />
-      </div>
+      {/* Model selection removed */}
 
       <div className="space-y-1">
         <Label>Prompt</Label>
