@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
 interface ChatSettingsProps {}
 
 export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
-  useHotkey("i", () => handleClick())
+  // Removed prompt settings UI entirely
 
   const {
     chatSettings,
@@ -46,49 +46,5 @@ export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
     })
   }, [chatSettings?.model])
 
-  if (!chatSettings) return null
-
-  const allModels = [
-    ...models.map(model => ({
-      modelId: model.model_id as LLMID,
-      modelName: model.name,
-      provider: "custom" as ModelProvider,
-      hostedId: model.id,
-      platformLink: "",
-      imageInput: false
-    })),
-    ...availableHostedModels,
-    // availableLocalModels removed
-    ...availableOpenRouterModels
-  ]
-
-  const fullModel = allModels.find(llm => llm.modelId === chatSettings.model)
-
-  return (
-    <Popover>
-      <PopoverTrigger>
-        <Button
-          ref={buttonRef}
-          className="flex items-center space-x-2"
-          variant="ghost"
-        >
-          <div className="max-w-[120px] truncate text-lg sm:max-w-[300px] lg:max-w-[500px]">
-            {fullModel?.modelName || chatSettings.model}
-          </div>
-
-          <IconAdjustmentsHorizontal size={28} />
-        </Button>
-      </PopoverTrigger>
-
-      <PopoverContent
-        className="bg-background border-input relative flex max-h-[calc(100vh-60px)] w-[300px] flex-col space-y-4 overflow-auto rounded-lg border-2 p-6 sm:w-[350px] md:w-[400px] lg:w-[500px] dark:border-none"
-        align="end"
-      >
-        <ChatSettingsForm
-          chatSettings={chatSettings}
-          onChangeChatSettings={setChatSettings}
-        />
-      </PopoverContent>
-    </Popover>
-  )
+  return null
 }

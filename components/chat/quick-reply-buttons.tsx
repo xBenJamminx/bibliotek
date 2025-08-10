@@ -6,11 +6,11 @@ import { useChatHandler } from "./chat-hooks/use-chat-handler"
 interface QuickReplyButtonsProps {}
 
 const QUICK_REPLIES = [
-  "Can you explain that in simpler terms?",
-  "What are the pros and cons?",
-  "Can you give me an example?",
-  "What's the best approach?",
-  "Tell me more about this"
+  "Tell me all about Particle Ink",
+  "Who is the Ink God?",
+  "Who is Root and Bloom?",
+  "What is Luminocity?",
+  "What is the 2.5th dimension?"
 ]
 
 export const QuickReplyButtons: FC<QuickReplyButtonsProps> = ({}) => {

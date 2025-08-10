@@ -78,7 +78,9 @@ export const CommandK: FC<CommandKProps> = ({}) => {
               </div>
             </div>
           ) : (
-            <div>Add your OpenAI API key in the settings to unlock CMD+K.</div>
+            <div>
+              Add your OpenAI API key in the settings to unlock Ctrl+Shift+K.
+            </div>
           )}
         </DialogContent>
       </Dialog>

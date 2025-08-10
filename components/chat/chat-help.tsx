@@ -35,34 +35,18 @@ export const ChatHelp: FC<ChatHelpProps> = ({}) => {
           <div className="flex space-x-2">
             <Link
               className="cursor-pointer hover:opacity-50"
-              href="https://twitter.com/ChatbotUI"
+              href="https://x.com/particleink"
               target="_blank"
               rel="noopener noreferrer"
             >
               <IconBrandX />
-            </Link>
-
-            <Link
-              className="cursor-pointer hover:opacity-50"
-              href="https://github.com/mckaywrigley/chatbot-ui"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <IconBrandGithub />
             </Link>
           </div>
 
           <div className="flex space-x-2">
             <Announcements />
 
-            <Link
-              className="cursor-pointer hover:opacity-50"
-              href="/help"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <IconHelpCircle size={24} />
-            </Link>
+            {/* Help button removed */}
           </div>
         </DropdownMenuLabel>
 
@@ -71,10 +55,10 @@ export const ChatHelp: FC<ChatHelpProps> = ({}) => {
         <DropdownMenuItem className="flex justify-between">
           <div>Show Help</div>
           <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
+            <div className="min-w-[36px] rounded border-DEFAULT p-1 text-center">
+              Ctrl
             </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
+            <div className="min-w-[46px] rounded border-DEFAULT p-1 text-center">
               Shift
             </div>
             <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
@@ -83,28 +67,15 @@ export const ChatHelp: FC<ChatHelpProps> = ({}) => {
           </div>
         </DropdownMenuItem>
 
-        <DropdownMenuItem className="flex justify-between">
-          <div>Show Workspaces</div>
-          <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
-            </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              Shift
-            </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ;
-            </div>
-          </div>
-        </DropdownMenuItem>
+        {/* Workspaces removed */}
 
         <DropdownMenuItem className="flex w-[300px] justify-between">
           <div>New Chat</div>
           <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
+            <div className="min-w-[36px] rounded border-DEFAULT p-1 text-center">
+              Ctrl
             </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
+            <div className="min-w-[46px] rounded border-DEFAULT p-1 text-center">
               Shift
             </div>
             <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
@@ -116,10 +87,10 @@ export const ChatHelp: FC<ChatHelpProps> = ({}) => {
         <DropdownMenuItem className="flex justify-between">
           <div>Focus Chat</div>
           <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
+            <div className="min-w-[36px] rounded border-DEFAULT p-1 text-center">
+              Ctrl
             </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
+            <div className="min-w-[46px] rounded border-DEFAULT p-1 text-center">
               Shift
             </div>
             <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
@@ -131,10 +102,10 @@ export const ChatHelp: FC<ChatHelpProps> = ({}) => {
         <DropdownMenuItem className="flex justify-between">
           <div>Toggle Files</div>
           <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
+            <div className="min-w-[36px] rounded border-DEFAULT p-1 text-center">
+              Ctrl
             </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
+            <div className="min-w-[46px] rounded border-DEFAULT p-1 text-center">
               Shift
             </div>
             <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
@@ -146,10 +117,10 @@ export const ChatHelp: FC<ChatHelpProps> = ({}) => {
         <DropdownMenuItem className="flex justify-between">
           <div>Toggle Retrieval</div>
           <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
+            <div className="min-w-[36px] rounded border-DEFAULT p-1 text-center">
+              Ctrl
             </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
+            <div className="min-w-[46px] rounded border-DEFAULT p-1 text-center">
               Shift
             </div>
             <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
@@ -158,43 +129,17 @@ export const ChatHelp: FC<ChatHelpProps> = ({}) => {
           </div>
         </DropdownMenuItem>
 
-        <DropdownMenuItem className="flex justify-between">
-          <div>Open Settings</div>
-          <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
-            </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              Shift
-            </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              I
-            </div>
-          </div>
-        </DropdownMenuItem>
+        {/* Settings removed */}
 
-        <DropdownMenuItem className="flex justify-between">
-          <div>Open Quick Settings</div>
-          <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
-            </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              Shift
-            </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              P
-            </div>
-          </div>
-        </DropdownMenuItem>
+        {/* Quick settings removed */}
 
         <DropdownMenuItem className="flex justify-between">
           <div>Toggle Sidebar</div>
           <div className="flex opacity-60">
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
-              ⌘
+            <div className="min-w-[36px] rounded border-DEFAULT p-1 text-center">
+              Ctrl
             </div>
-            <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
+            <div className="min-w-[46px] rounded border-DEFAULT p-1 text-center">
               Shift
             </div>
             <div className="min-w-[30px] rounded border-DEFAULT p-1 text-center">
