@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.OPENAI_API_KEY
     const assistantIdFromEnv = process.env.ASSISTANT_ID
     const vectorStoreId = process.env.VECTOR_STORE_ID
+    const vectorStoreIdsEnv = process.env.VECTOR_STORE_IDS // optional comma-separated list
 
     if (!apiKey) {
       return NextResponse.json(
@@ -54,10 +55,25 @@ export async function POST(request: NextRequest) {
           }
         )
         const data = resp?.data || []
-        for (const f of data) {
-          const filename = (f as any)?.filename
-          if (filename) names.push(filename)
+
+        // vector-store file objects typically contain file_id; retrieve filename per item
+        const fileIds = data.map((d: any) => d?.file_id).filter(Boolean)
+        if (fileIds.length > 0) {
+          const details = await Promise.all(
+            fileIds.map(async (fid: string) => {
+              try {
+                const file = await (openai as any).files.retrieve(fid)
+                return file?.filename as string | undefined
+              } catch {
+                return undefined
+              }
+            })
+          )
+          for (const name of details) {
+            if (name) names.push(name)
+          }
         }
+
         if (resp?.has_more) {
           after = resp?.last_id
         } else {
@@ -103,19 +119,45 @@ export async function POST(request: NextRequest) {
           const runParams: any = { assistant_id: resolvedAssistantId }
 
           let vectorNames: string[] = []
-          if (vectorStoreId) {
+          const vectorIds: string[] = (
+            vectorStoreIdsEnv
+              ? vectorStoreIdsEnv
+                  .split(",")
+                  .map(s => s.trim())
+                  .filter(Boolean)
+              : []
+          ).concat(vectorStoreId ? [vectorStoreId] : [])
+          if (vectorIds.length > 0) {
             runParams.tools = [{ type: "file_search" }]
             runParams.tool_resources = {
-              file_search: { vector_store_ids: [vectorStoreId] }
+              file_search: { vector_store_ids: vectorIds }
             }
             try {
-              vectorNames = await fetchAllVectorStoreFileNames(vectorStoreId)
+              const nameLists = await Promise.all(
+                vectorIds.map(id => fetchAllVectorStoreFileNames(id))
+              )
+              vectorNames = Array.from(new Set(nameLists.flat()))
             } catch {}
           }
 
-          // Provide awareness info from Vector Store only
+          // Privacy-preserving instructions: never reveal sources, files, or storage mechanisms
+          const userAskedAboutSources =
+            /\b(source|sources|file|files|document|documents|knowledge\s*base|kb|trained\s*on|training\s*data|vector\s*store)\b/i.test(
+              lastUser || ""
+            )
+
+          const basePrivacyInstructions =
+            "You may silently use a private knowledge base via a retrieval tool to answer questions, but you must never mention, enumerate, or reference files, file names, documents, sources, vector stores, or training data. If the user asks about data sources, files, or what the system is trained on, politely say you can't share that information and continue to answer the question directly without mentioning any sources."
+
           if ((vectorNames || []).length > 0) {
-            runParams.instructions = `You have access to an OpenAI file search tool backed by a vector store. Total files available: ${vectorNames.length}. File names: ${vectorNames.join(", ")}. When asked about available files, enumerate these exactly; do not reference any app-managed or local files.`
+            runParams.instructions = basePrivacyInstructions
+          } else {
+            runParams.instructions = basePrivacyInstructions
+          }
+
+          if (userAskedAboutSources) {
+            runParams.instructions +=
+              " Always avoid acknowledging the existence of documents or files; provide an answer without referencing any underlying materials."
           }
 
           const assistantStream = await openai.beta.threads.runs.stream(
