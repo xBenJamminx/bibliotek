@@ -163,8 +163,14 @@ export const GlobalState: FC<GlobalStateProps> = ({ children }) => {
     if (session) {
       const user = session.user
 
-      const profile = await getProfileByUserId(user.id)
-      setProfile(profile)
+      try {
+        const profile = await getProfileByUserId(user.id)
+        setProfile(profile)
+      } catch (err) {
+        console.error("Failed to load profile:", err)
+        // Continue without a profile to avoid hard crash
+        setProfile(null)
+      }
 
       // Skip onboarding: proceed directly
 

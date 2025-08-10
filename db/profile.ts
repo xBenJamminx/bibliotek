@@ -8,9 +8,8 @@ export const getProfileByUserId = async (userId: string) => {
     .eq("user_id", userId)
     .single()
 
-  if (!profile) {
-    throw new Error(error.message)
-  }
+  if (error) throw new Error(error.message || "Failed to fetch profile")
+  if (!profile) throw new Error("Profile not found")
 
   return profile
 }

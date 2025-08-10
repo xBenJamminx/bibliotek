@@ -7,7 +7,6 @@ import {
 } from "@/db/limits"
 import { updateProfile } from "@/db/profile"
 import { uploadProfileImage } from "@/db/storage/profile-images"
-import { exportLocalStorageAsJSON } from "@/lib/export-old-data"
 import { fetchOpenRouterModels } from "@/lib/models/fetch-models"
 import { LLM_LIST_MAP } from "@/lib/models/llm/llm-list"
 import { supabase } from "@/lib/supabase/browser-client"
@@ -16,7 +15,6 @@ import { OpenRouterLLM } from "@/types"
 import {
   IconCircleCheckFilled,
   IconCircleXFilled,
-  IconFileDownload,
   IconLoader2,
   IconLogout,
   IconUser
@@ -40,7 +38,6 @@ import {
 } from "../ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 import { TextareaAutosize } from "../ui/textarea-autosize"
-import { WithTooltip } from "../ui/with-tooltip"
 import { ThemeSwitcher } from "./theme-switcher"
 
 interface ProfileSettingsProps {}
@@ -296,19 +293,25 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        {profile.image_url ? (
-          <Image
-            className="mt-2 size-[34px] cursor-pointer rounded hover:opacity-50"
-            src={profile.image_url + "?" + new Date().getTime()}
-            height={34}
-            width={34}
-            alt={"Image"}
-          />
-        ) : (
-          <Button size="icon" variant="ghost">
+        <Button
+          variant="ghost"
+          className="mt-2 h-[34px] w-auto cursor-pointer items-center gap-2 px-2 hover:opacity-80"
+        >
+          {profile.image_url ? (
+            <Image
+              className="size-[28px] rounded"
+              src={profile.image_url + "?" + new Date().getTime()}
+              height={28}
+              width={28}
+              alt={"Image"}
+            />
+          ) : (
             <IconUser size={SIDEBAR_ICON_SIZE} />
-          </Button>
-        )}
+          )}
+          <span className="hidden max-w-[200px] truncate text-sm md:block">
+            {profile.username || profile.display_name || "Account"}
+          </span>
+        </Button>
       </SheetTrigger>
 
       <SheetContent
@@ -730,21 +733,6 @@ export const ProfileSettings: FC<ProfileSettingsProps> = ({}) => {
         <div className="mt-6 flex items-center">
           <div className="flex items-center space-x-1">
             <ThemeSwitcher />
-
-            <WithTooltip
-              display={
-                <div>
-                  Download Chatbot UI 1.0 data as JSON. Import coming soon!
-                </div>
-              }
-              trigger={
-                <IconFileDownload
-                  className="cursor-pointer hover:opacity-50"
-                  size={32}
-                  onClick={exportLocalStorageAsJSON}
-                />
-              }
-            />
           </div>
 
           <div className="ml-auto space-x-2">

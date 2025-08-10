@@ -4,25 +4,15 @@ import { ChatbotUIContext } from "@/context/context"
 import useHotkey from "@/lib/hooks/use-hotkey"
 import { LLM_LIST } from "@/lib/models/llm/llm-list"
 import { cn } from "@/lib/utils"
-import {
-  IconBolt,
-  IconCirclePlus,
-  IconPlayerStopFilled,
-  IconSend
-} from "@tabler/icons-react"
+import { IconBolt, IconPlayerStopFilled, IconSend } from "@tabler/icons-react"
 import Image from "next/image"
 import { FC, useContext, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
-import { Input } from "../ui/input"
 import { TextareaAutosize } from "../ui/textarea-autosize"
-import { ChatCommandInput } from "./chat-command-input"
-import { ChatFilesDisplay } from "./chat-files-display"
 import { useChatHandler } from "./chat-hooks/use-chat-handler"
 import { useChatHistoryHandler } from "./chat-hooks/use-chat-history"
-import { usePromptAndCommand } from "./chat-hooks/use-prompt-and-command"
 import { QuickReplyButtons } from "./quick-reply-buttons"
-import { useSelectFileHandler } from "./chat-hooks/use-select-file-handler"
 
 interface ChatInputProps {}
 
@@ -69,16 +59,14 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
     handleFocusChatInput
   } = useChatHandler()
 
-  const { handleInputChange } = usePromptAndCommand()
-
-  const { filesToAccept, handleSelectDeviceFile } = useSelectFileHandler()
+  // Commands and file upload removed; handle input directly
 
   const {
     setNewMessageContentToNextUserMessage,
     setNewMessageContentToPreviousUserMessage
   } = useChatHistoryHandler()
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  // File input removed
 
   useEffect(() => {
     setTimeout(() => {
@@ -162,32 +150,11 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
     }
   }
 
-  const handlePaste = (event: React.ClipboardEvent) => {
-    const imagesAllowed = LLM_LIST.find(
-      llm => llm.modelId === chatSettings?.model
-    )?.imageInput
-
-    const items = event.clipboardData.items
-    for (const item of items) {
-      if (item.type.indexOf("image") === 0) {
-        if (!imagesAllowed) {
-          toast.error(
-            `Images are not supported for this model. Use models like GPT-4 Vision instead.`
-          )
-          return
-        }
-        const file = item.getAsFile()
-        if (!file) return
-        handleSelectDeviceFile(file, false)
-      }
-    }
-  }
+  // Paste handling for images removed
 
   return (
     <>
       <div className="flex flex-col flex-wrap justify-center gap-2">
-        <ChatFilesDisplay />
-
         {selectedTools &&
           selectedTools.map((tool, index) => (
             <div
@@ -234,29 +201,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
       </div>
 
       <div className="border-input relative mt-3 flex min-h-[60px] w-full items-center justify-center rounded-xl border-2">
-        <div className="absolute bottom-[76px] left-0 max-h-[300px] w-full overflow-auto rounded-xl dark:border-none">
-          <ChatCommandInput />
-        </div>
-
-        <>
-          <IconCirclePlus
-            className="absolute bottom-[12px] left-3 cursor-pointer p-1 transition-transform duration-200 hover:scale-110 hover:opacity-50"
-            size={32}
-            onClick={() => fileInputRef.current?.click()}
-          />
-
-          {/* Hidden input to select files from device */}
-          <Input
-            ref={fileInputRef}
-            className="hidden"
-            type="file"
-            onChange={e => {
-              if (!e.target.files) return
-              handleSelectDeviceFile(e.target.files[0], false)
-            }}
-            accept={filesToAccept}
-          />
-        </>
+        {/* Commands and file upload removed */}
 
         <TextareaAutosize
           textareaRef={chatInputRef}
@@ -264,12 +209,10 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             "ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring text-md flex w-full resize-none rounded-md border-none bg-transparent px-14 py-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
             isGenerating && "opacity-75"
           )}
-          placeholder={t(
-            `Ask anything. Type "/" for prompts, "#" for files, and "!" for tools.`
-          )}
+          placeholder={t("Ask anything")}
           onValueChange={value => {
             console.log("TextareaAutosize onValueChange:", value)
-            handleInputChange(value)
+            setUserInput(value)
           }}
           value={userInput}
           minRows={1}
@@ -278,7 +221,7 @@ export const ChatInput: FC<ChatInputProps> = ({}) => {
             console.log("TextareaAutosize onKeyDown:", e.key)
             handleKeyDown(e)
           }}
-          onPaste={handlePaste}
+          // onPaste removed
           onCompositionStart={() => setIsTyping(true)}
           onCompositionEnd={() => setIsTyping(false)}
           disabled={isGenerating}
