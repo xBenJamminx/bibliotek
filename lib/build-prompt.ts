@@ -178,10 +178,10 @@ export async function buildFinalMessages(
 
 function buildRetrievalText(fileItems: Tables<"file_items">[]) {
   const retrievalText = fileItems
-    .map(item => `<BEGIN SOURCE>\n${item.content}\n</END SOURCE>`)
+    .map(item => `<BEGIN CONTEXT>\n${item.content}\n</END CONTEXT>`)
     .join("\n\n")
 
-  return `You may use the following sources if needed to answer the user's question. If you don't know the answer, say "I don't know."\n\n${retrievalText}`
+  return `Use the following context if helpful to answer the user's question. If you don't know the answer, say "I don't know."\n\n${retrievalText}`
 }
 
 function adaptSingleMessageForGoogleGemini(message: any) {
