@@ -10,6 +10,7 @@ import { Metadata, Viewport } from "next"
 import { Inter } from "next/font/google"
 import { cookies } from "next/headers"
 import { ReactNode } from "react"
+import dynamic from "next/dynamic"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -94,6 +95,11 @@ export default async function RootLayout({
 
   const { t, resources } = await initTranslations(locale, i18nNamespaces)
 
+  // Load widget only on client to avoid SSR issues
+  const WidgetRoot = dynamic(() => import("@/components/widget/widget-root"), {
+    ssr: false
+  })
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
@@ -107,6 +113,7 @@ export default async function RootLayout({
             <div className="bg-background text-foreground flex h-dvh flex-col items-center overflow-x-auto">
               {session ? <GlobalState>{children}</GlobalState> : children}
             </div>
+            <WidgetRoot />
           </TranslationsProvider>
         </Providers>
       </body>

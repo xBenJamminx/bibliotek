@@ -1,7 +1,9 @@
+"use client"
 import { Tables } from "@/supabase/types"
 import { ContentType, DataListType } from "@/types"
 import { FC, useState } from "react"
 import { SidebarCreateButtons } from "./sidebar-create-buttons"
+import { ProfileSettings } from "../utility/profile-settings"
 import { SidebarDataList } from "./sidebar-data-list"
 import { SidebarSearch } from "./sidebar-search"
 
@@ -23,8 +25,8 @@ export const SidebarContent: FC<SidebarContentProps> = ({
   )
 
   return (
-    // Subtract 50px for the height of the workspace settings
-    <div className="flex max-h-[calc(100%-50px)] grow flex-col">
+    // Full-height container; position profile button absolutely at bottom-left
+    <div className="relative flex h-full grow flex-col">
       <div className="mt-2 flex items-center">
         <SidebarCreateButtons
           contentType={contentType}
@@ -40,26 +42,18 @@ export const SidebarContent: FC<SidebarContentProps> = ({
         />
       </div>
 
-      <SidebarDataList
-        contentType={contentType}
-        data={filteredData}
-        folders={folders}
-      />
+      <div className="pb-14">
+        <SidebarDataList
+          contentType={contentType}
+          data={filteredData}
+          folders={folders}
+        />
+      </div>
 
-      {/* Move account button to bottom of chat column only */}
+      {/* Account/profile button at bottom of chat column */}
       {contentType === "chats" && (
-        <div className="mt-auto pt-2">
-          <div className="flex justify-center">
-            <div className="w-full">
-              {/* Use profile settings as account button */}
-              {/* Reuse existing component */}
-              <div className="flex justify-center">
-                {/* Minimal button look; the component renders its own trigger */}
-                {/* @ts-expect-error server component typing passthrough */}
-                <></>
-              </div>
-            </div>
-          </div>
+        <div className="absolute bottom-2 left-2">
+          <ProfileSettings />
         </div>
       )}
     </div>

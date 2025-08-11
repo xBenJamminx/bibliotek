@@ -1,3 +1,4 @@
+"use client"
 import { ContentType } from "@/types"
 import { FC } from "react"
 import { Input } from "../ui/input"
